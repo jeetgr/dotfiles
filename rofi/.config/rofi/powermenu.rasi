@@ -1,0 +1,32 @@
+@theme "catppuccin-mocha"
+
+configuration {
+    show-icons: false;
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+window {
+    width: 600px;
+}
+
+mainbox {
+    padding: 18px;
+    spacing: 14px;
+}
+
+listview {
+    columns: 1;
+    lines: 5;
+    spacing: 4px;
+    cycle: true;
+}
+
+element {
+    orientation: horizontal;
+    padding: 10px 14px;
+}
+
+element-text {
+    horizontal-align: 0.0;
+    vertical-align: 0.5;
+}

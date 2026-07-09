@@ -30,8 +30,8 @@ hl.monitor({
 local terminal = "kitty"
 local fileManager = "dolphin"
 local browser = "zen-browser"
-local launcher = "rofi -show drun -show-icons"
-local runner = "rofi -show run"
+local launcher = "rofi -show drun -show-icons || pkill rofi"
+local runner = "rofi -show run || pkill rofi"
 
 -------------------
 ---- AUTOSTART ----
@@ -44,6 +44,7 @@ hl.on("hyprland.start", function()
 	hl.exec_cmd("mako")
 	hl.exec_cmd("hypridle")
 	hl.exec_cmd("wl-paste --watch cliphist store")
+	hl.exec_cmd("~/.config/hypr/scripts/auto-touchpad.sh")
 end)
 
 -------------------------------
@@ -221,7 +222,7 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(launcher))
 hl.bind(secondMod .. " + Space", hl.dsp.exec_cmd(runner))
 
-hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+hl.bind(mainMod .. " + W", hl.dsp.window.close())
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("~/.config/rofi/powermenu.sh"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 

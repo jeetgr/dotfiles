@@ -28,7 +28,7 @@
     background-color: transparent;
     text-color: @text;
     accent: @mauve;
-    font: "JetBrainsMono Nerd Font 11";
+    font: "JetBrainsMono Nerd Font Propo 11";
 }
 window {
     background-color: @base;
@@ -56,7 +56,7 @@ inputbar {
 prompt {
     background-color: transparent;
     text-color: @accent;
-    font: "JetBrainsMono Nerd Font 11";
+    font: "JetBrainsMono Nerd Font Propo 11";
 }
 entry {
     background-color: transparent;

@@ -1,25 +1,141 @@
 # Get editor completions based on the config schema
 "$schema" = 'https://starship.rs/config-schema.json'
 
-add_newline = false
+# Blank line before each prompt for breathing room
+add_newline = true
 
-# Sets user-defined palette
-# Palettes must be defined _after_ this line
+# Catppuccin Mocha (palette defined at the bottom of this file)
 palette = "catppuccin_mocha"
 
-# Starship modules
-[character]
-# Note the use of Catppuccin color 'peach'
-success_symbol = "[[󰄛](green) ❯](peach)"
-error_symbol = "[[󰄛](red) ❯](peach)"
-vimcmd_symbol = "[󰄛 ❮](subtext1)" # For use with zsh-vi-mode
+# Two-line prompt: info on the first line, prompt symbol on the second.
+format = """\
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$nodejs\
+$python\
+$rust\
+$golang\
+$java\
+$c\
+$lua\
+$php\
+$ruby\
+$docker_context\
+$nix_shell\
+$package\
+$line_break\
+$character"""
 
-[git_branch]
-style = "bold mauve"
+# Command duration floats to the right of the first line.
+right_format = """$cmd_duration"""
+
+[character]
+success_symbol = "[❯](green)"
+error_symbol = "[❯](red)"
+vimcmd_symbol = "[❮](mauve)" # For use with zsh-vi-mode
 
 [directory]
-truncation_length = 4
+truncation_length = 3
+truncation_symbol = "…/"
+home_symbol = "~"
+read_only = " 󰌾"
+read_only_style = "red"
 style = "bold lavender"
+format = "[$path]($style)[$read_only]($read_only_style) "
+
+[git_branch]
+symbol = " "
+style = "bold mauve"
+format = "[$symbol$branch]($style) "
+
+[git_state]
+style = "bold peach"
+format = '\([$state( $progress_current/$progress_total)]($style)\) '
+
+[git_status]
+style = "red"
+format = '([\[$all_status$ahead_behind\]]($style) )'
+conflicted = "=${count}"
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?${count}"
+stashed = "󰏒 ${count}"
+modified = "!${count}"
+staged = "+${count}"
+renamed = "»${count}"
+deleted = "✘${count}"
+
+# --- Languages / runtimes (only shown inside relevant projects) ---
+
+[nodejs]
+symbol = " "
+style = "green"
+format = "[$symbol($version )]($style)"
+
+[python]
+symbol = " "
+style = "yellow"
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+
+[rust]
+symbol = " "
+style = "maroon"
+format = "[$symbol($version )]($style)"
+
+[golang]
+symbol = " "
+style = "sky"
+format = "[$symbol($version )]($style)"
+
+[java]
+symbol = " "
+style = "red"
+format = "[$symbol($version )]($style)"
+
+[c]
+symbol = " "
+style = "blue"
+format = "[$symbol($version(-$name) )]($style)"
+
+[lua]
+symbol = " "
+style = "blue"
+format = "[$symbol($version )]($style)"
+
+[php]
+symbol = " "
+style = "mauve"
+format = "[$symbol($version )]($style)"
+
+[ruby]
+symbol = " "
+style = "red"
+format = "[$symbol($version )]($style)"
+
+# --- Extras ---
+
+[docker_context]
+symbol = " "
+style = "blue"
+format = "[$symbol$context]($style) "
+
+[nix_shell]
+symbol = " "
+style = "sapphire"
+format = '[$symbol$state( \($name\))]($style) '
+
+[package]
+symbol = "󰏗 "
+style = "peach"
+format = "[$symbol$version]($style) "
+
+[cmd_duration]
+min_time = 500
+style = "yellow"
+format = "[󱎫 $duration]($style)"
 
 [palettes.catppuccin_mocha]
 rosewater = "#f5e0dc"

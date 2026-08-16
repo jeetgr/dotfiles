@@ -87,7 +87,7 @@ zle -N _fzf_file_no_hidden
 
 # Aliases
 
-alias ls='eza --icons'
+alias ls='eza'
 alias ll='eza -lh --icons --git'
 alias la='eza -lah --icons --git'
 alias tree='eza --tree --icons'
@@ -182,3 +182,5 @@ eval "$(starship init zsh)"
 # =========================================================
 
 eval "$(/usr/bin/mise activate zsh)"
+
+. "$HOME/.local/share/../bin/env"

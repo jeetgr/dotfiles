@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 
@@ -14,29 +15,20 @@ Pill {
     icon: {
         if (type === "wifi")
             return "󰤨";
+
         if (type === "ethernet")
             return "󰈀";
+
         return "󰤭";
     }
     text: {
         if (type === "wifi" || type === "ethernet")
             return name;
+
         return "disconnected";
     }
     textColor: type === "disconnected" ? Colors.red : Colors.teal
     iconColor: textColor
-    tooltipText: {
-        if (type === "disconnected")
-            return "No network connection";
-        let tip = name;
-        if (type === "wifi" && signal >= 0)
-            tip += " (" + signal + "%)";
-        if (device.length > 0)
-            tip += "\n" + device;
-        if (ipCidr.length > 0)
-            tip += "\n" + ipCidr;
-        return tip;
-    }
 
     Process {
         id: netProcess
@@ -49,6 +41,7 @@ Pill {
         onRunningChanged: {
             if (running)
                 gotResult = false;
+
         }
         onExited: {
             if (!gotResult) {
@@ -65,7 +58,7 @@ Pill {
                 let trimmed = line.trim();
                 let parts = trimmed.split("|");
                 if (parts.length < 1)
-                    return;
+                    return ;
 
                 if (parts[0] === "disconnected") {
                     netPill.type = "disconnected";
@@ -74,12 +67,11 @@ Pill {
                     netPill.ipCidr = "";
                     netPill.signal = -1;
                     netProcess.gotResult = true;
-                    return;
+                    return ;
                 }
-
                 let devType = parts[0];
                 if (devType !== "wifi" && devType !== "ethernet")
-                    return;
+                    return ;
 
                 netPill.type = devType;
                 netPill.name = parts.length > 1 ? parts[1] : "";
@@ -102,6 +94,192 @@ Pill {
             netProcess.running = false;
             netProcess.running = true;
         }
+    }
+
+    Popout {
+        id: netPopout
+
+        anchorItem: netPill
+        show: netPill.hovered || netPopout.popoutHovered
+        borderColor: Colors.teal
+
+        Text {
+            text: "Network"
+            color: Colors.subtext0
+            font.family: "JetBrainsMono Nerd Font Propo"
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+        }
+
+        Row {
+            spacing: 8
+
+            Text {
+                text: netPill.icon
+                color: netPill.textColor
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 20
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Column {
+                spacing: 2
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                    width: 200
+                    text: netPill.type === "disconnected" ? "Disconnected" : (netPill.name || netPill.type)
+                    color: Colors.text
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    text: netPill.type === "wifi" ? "Wi-Fi" : (netPill.type === "ethernet" ? "Ethernet" : "No connection")
+                    color: Colors.subtext0
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 11
+                }
+
+            }
+
+        }
+
+        Column {
+            visible: netPill.type !== "disconnected"
+            spacing: 6
+            width: 240
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    text: "Device"
+                    color: Colors.overlay0
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 11
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: netPill.device || "—"
+                    color: Colors.text
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideLeft
+                }
+
+            }
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    text: "IPv4"
+                    color: Colors.overlay0
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 11
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: netPill.ipCidr || "—"
+                    color: Colors.text
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideLeft
+                }
+
+            }
+
+            Column {
+                visible: netPill.type === "wifi" && netPill.signal >= 0
+                spacing: 4
+                width: parent.width
+
+                RowLayout {
+                    width: parent.width
+
+                    Text {
+                        text: "Signal"
+                        color: Colors.overlay0
+                        font.family: "JetBrainsMono Nerd Font Propo"
+                        font.pixelSize: 11
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: netPill.signal + "%"
+                        color: Colors.teal
+                        font.family: "JetBrainsMono Nerd Font Propo"
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
+                        horizontalAlignment: Text.AlignRight
+                    }
+
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 6
+                    radius: 3
+                    color: Colors.surface0
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: parent.width * (netPill.signal / 100)
+                        radius: parent.radius
+                        color: Colors.teal
+                    }
+
+                }
+
+            }
+
+        }
+
+        Rectangle {
+            width: 240
+            height: 28
+            radius: 8
+            color: netBtnHover.hovered ? Colors.surface1 : Colors.surface0
+
+            HoverHandler {
+                id: netBtnHover
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "Open Network Manager"
+                color: Colors.teal
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Quickshell.execDetached(["nmgui"])
+            }
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: 120
+                }
+
+            }
+
+        }
+
     }
 
     MouseArea {

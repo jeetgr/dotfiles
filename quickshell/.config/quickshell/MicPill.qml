@@ -4,85 +4,50 @@ import Quickshell
 import Quickshell.Services.Pipewire
 
 Pill {
-    id: volumePill
+    id: micPill
 
-    property var sink: Pipewire.defaultAudioSink
-    property int volumePercent: sink && sink.audio ? Math.round(sink.audio.volume * 100) : 0
-    property bool isMuted: sink && sink.audio ? sink.audio.muted : false
-    property bool isHeadphone: {
-        if (!sink)
-            return false;
-
-        let label = ((sink.nickname || "") + " " + (sink.name || "") + " " + (sink.description || "")).toLowerCase();
-        return label.includes("headphone") || label.includes("headset");
-    }
-    property string volumeIcon: {
+    property var source: Pipewire.defaultAudioSource
+    property int volumePercent: source && source.audio ? Math.round(source.audio.volume * 100) : 0
+    property bool isMuted: source && source.audio ? source.audio.muted : true
+    property string micIcon: {
         if (isMuted || volumePercent === 0)
-            return "󰝟";
+            return "󰍭";
 
-        if (isHeadphone)
-            return "󰋋";
-
-        let icons = ["󰕿", "󰖀", "󰕾"];
-        let index = Math.min(icons.length - 1, Math.floor(volumePercent / 100 * icons.length));
-        return icons[index];
+        let icons = ["󰍬", "󰍬", "󰍬"];
+        return icons[Math.min(2, Math.floor(volumePercent / 100 * icons.length))];
     }
-    property bool osdReady: false
-    property string sinkLabel: {
-        if (!sink)
-            return "No output device";
+    property string sourceLabel: {
+        if (!source)
+            return "No input device";
 
-        return sink.description || sink.nickname || sink.name || "Output";
-    }
-
-    function showOsd() {
-        Osd.pushVolume(volumePercent, isMuted, isHeadphone);
+        return source.description || source.nickname || source.name || "Microphone";
     }
 
     function setVolumeFromX(x, width) {
-        if (!sink || !sink.audio || width <= 0)
+        if (!source || !source.audio || width <= 0)
             return ;
 
-        sink.audio.volume = Math.max(0, Math.min(1, x / width));
+        source.audio.volume = Math.max(0, Math.min(1, x / width));
     }
 
-    icon: volumeIcon
-    text: isMuted ? "muted" : volumePercent + "%"
-    textColor: isMuted ? Colors.overlay0 : Colors.sky
+    icon: micIcon
+    text: isMuted ? "mute" : volumePercent + "%"
+    textColor: isMuted ? Colors.overlay0 : Colors.pink
     iconColor: textColor
-    Component.onCompleted: Qt.callLater(() => {
-        volumePill.osdReady = true;
-    })
 
     PwObjectTracker {
-        objects: [Pipewire.defaultAudioSink]
-    }
-
-    Connections {
-        function onVolumeChanged() {
-            if (volumePill.osdReady)
-                volumePill.showOsd();
-
-        }
-
-        function onMutedChanged() {
-            if (volumePill.osdReady)
-                volumePill.showOsd();
-
-        }
-
-        target: volumePill.sink && volumePill.sink.audio ? volumePill.sink.audio : null
+        objects: [Pipewire.defaultAudioSource]
     }
 
     Popout {
-        id: volumePopout
+        id: micPopout
 
-        anchorItem: volumePill
-        show: volumePill.hovered || volumePopout.popoutHovered
-        borderColor: Colors.sky
+        anchorItem: micPill
+        show: micPill.hovered || micPopout.popoutHovered
+        borderColor: Colors.pink
 
         Text {
-            text: "Volume"
+            text: "Microphone"
             color: Colors.subtext0
             font.family: "JetBrainsMono Nerd Font Propo"
             font.pixelSize: 11
@@ -91,7 +56,7 @@ Pill {
 
         Text {
             width: 220
-            text: volumePill.sinkLabel
+            text: micPill.sourceLabel
             color: Colors.text
             font.family: "JetBrainsMono Nerd Font Propo"
             font.pixelSize: 12
@@ -104,8 +69,8 @@ Pill {
             spacing: 10
 
             Text {
-                text: volumePill.volumeIcon
-                color: volumePill.isMuted ? Colors.overlay0 : Colors.sky
+                text: micPill.micIcon
+                color: micPill.isMuted ? Colors.overlay0 : Colors.pink
                 font.family: "JetBrainsMono Nerd Font Propo"
                 font.pixelSize: 18
                 Layout.alignment: Qt.AlignVCenter
@@ -115,8 +80,8 @@ Pill {
                     anchors.margins: -4
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (volumePill.sink && volumePill.sink.audio)
-                            volumePill.sink.audio.muted = !volumePill.sink.audio.muted;
+                        if (micPill.source && micPill.source.audio)
+                            micPill.source.audio.muted = !micPill.source.audio.muted;
 
                     }
                 }
@@ -124,8 +89,6 @@ Pill {
             }
 
             Item {
-                id: slider
-
                 Layout.fillWidth: true
                 Layout.preferredHeight: 18
                 Layout.alignment: Qt.AlignVCenter
@@ -141,9 +104,9 @@ Pill {
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
-                        width: parent.width * (volumePill.isMuted ? 0 : (volumePill.volumePercent / 100))
+                        width: parent.width * (micPill.isMuted ? 0 : (micPill.volumePercent / 100))
                         radius: parent.radius
-                        color: volumePill.isMuted ? Colors.overlay0 : Colors.sky
+                        color: micPill.isMuted ? Colors.overlay0 : Colors.pink
                     }
 
                 }
@@ -152,30 +115,30 @@ Pill {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onPressed: (mouse) => {
-                        return volumePill.setVolumeFromX(mouse.x, width);
+                        return micPill.setVolumeFromX(mouse.x, width);
                     }
                     onPositionChanged: (mouse) => {
                         if (pressed)
-                            volumePill.setVolumeFromX(mouse.x, width);
+                            micPill.setVolumeFromX(mouse.x, width);
 
                     }
                     onWheel: (event) => {
-                        if (!volumePill.sink || !volumePill.sink.audio)
+                        if (!micPill.source || !micPill.source.audio)
                             return ;
 
                         let step = 0.05;
                         if (event.angleDelta.y > 0)
-                            volumePill.sink.audio.volume = Math.min(1, volumePill.sink.audio.volume + step);
+                            micPill.source.audio.volume = Math.min(1, micPill.source.audio.volume + step);
                         else
-                            volumePill.sink.audio.volume = Math.max(0, volumePill.sink.audio.volume - step);
+                            micPill.source.audio.volume = Math.max(0, micPill.source.audio.volume - step);
                     }
                 }
 
             }
 
             Text {
-                text: volumePill.isMuted ? "mute" : (volumePill.volumePercent + "%")
-                color: volumePill.isMuted ? Colors.overlay0 : Colors.text
+                text: micPill.isMuted ? "mute" : (micPill.volumePercent + "%")
+                color: micPill.isMuted ? Colors.overlay0 : Colors.text
                 font.family: "JetBrainsMono Nerd Font Propo"
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
@@ -199,7 +162,7 @@ Pill {
             Text {
                 anchors.centerIn: parent
                 text: "Open mixer"
-                color: Colors.sky
+                color: Colors.pink
                 font.family: "JetBrainsMono Nerd Font Propo"
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
@@ -231,19 +194,19 @@ Pill {
                 Quickshell.execDetached(["pwvucontrol"]);
                 return ;
             }
-            if (volumePill.sink && volumePill.sink.audio)
-                volumePill.sink.audio.muted = !volumePill.sink.audio.muted;
+            if (micPill.source && micPill.source.audio)
+                micPill.source.audio.muted = !micPill.source.audio.muted;
 
         }
         onWheel: (event) => {
-            if (!volumePill.sink || !volumePill.sink.audio)
+            if (!micPill.source || !micPill.source.audio)
                 return ;
 
             let step = 0.05;
             if (event.angleDelta.y > 0)
-                volumePill.sink.audio.volume = Math.min(1, volumePill.sink.audio.volume + step);
+                micPill.source.audio.volume = Math.min(1, micPill.source.audio.volume + step);
             else
-                volumePill.sink.audio.volume = Math.max(0, volumePill.sink.audio.volume - step);
+                micPill.source.audio.volume = Math.max(0, micPill.source.audio.volume - step);
         }
     }
 

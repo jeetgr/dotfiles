@@ -4,9 +4,6 @@ import Quickshell
 Item {
     id: root
 
-    width: clockPill.width
-    height: 28
-
     function buildCalendar(d) {
         let year = d.getFullYear();
         let month = d.getMonth();
@@ -15,25 +12,26 @@ Item {
         let daysInMonth = new Date(year, month + 1, 0).getDate();
         let lines = [Qt.formatDateTime(d, "yyyy MMMM"), "Su Mo Tu We Th Fr Sa"];
         let cells = [];
-        for (let i = 0; i < firstDow; i++)
-            cells.push("  ");
+        for (let i = 0; i < firstDow; i++) cells.push("  ")
         for (let day = 1; day <= daysInMonth; day++) {
             if (day === today)
                 cells.push(day < 10 ? "*" + day : "" + day + "*");
             else
                 cells.push(day < 10 ? " " + day : "" + day);
         }
-        while (cells.length % 7 !== 0)
-            cells.push("  ");
-        for (let i = 0; i < cells.length; i += 7)
-            lines.push(cells.slice(i, i + 7).join(" "));
+        while (cells.length % 7 !== 0)cells.push("  ")
+        for (let i = 0; i < cells.length; i += 7) lines.push(cells.slice(i, i + 7).join(" "))
         return lines.join("\n");
     }
+
+    width: clockPill.width
+    height: 28
 
     Rectangle {
         id: clockPill
 
         property bool showDate: false
+        property bool hovered: clockMouse.containsMouse
 
         anchors.verticalCenter: parent.verticalCenter
         width: clockRow.width + 32
@@ -67,11 +65,39 @@ Item {
 
         }
 
-        Tooltip {
+        Popout {
+            id: clockPopout
+
             anchorItem: clockPill
-            text: root.buildCalendar(clock.currentTime)
-            show: clockMouse.containsMouse && !clockPill.showDate
-            delayMs: 250
+            show: (clockPill.hovered || clockPopout.popoutHovered) && !clockPill.showDate
+            borderColor: Colors.mauve
+
+            Text {
+                text: "Calendar"
+                color: Colors.subtext0
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 11
+                font.weight: Font.DemiBold
+            }
+
+            Text {
+                text: root.buildCalendar(clock.currentTime)
+                color: Colors.text
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+                font.features: {
+                    "tnum": 1
+                }
+            }
+
+            Text {
+                text: "Click clock to toggle date"
+                color: Colors.overlay0
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 10
+            }
+
         }
 
         MouseArea {

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 
@@ -11,7 +12,6 @@ Pill {
     text: onAc ? "AC" : "BAT"
     textColor: Colors.lavender
     iconColor: textColor
-    tooltipText: "Power mode: " + (onAc ? "AC" : "BAT") + " (TLP managed)"
 
     Process {
         id: tlpProcess
@@ -24,6 +24,7 @@ Pill {
                 let mode = line.trim();
                 if (mode === "AC" || mode === "BAT")
                     tlpPill.onAc = mode === "AC";
+
             }
         }
 
@@ -38,6 +39,100 @@ Pill {
             tlpProcess.running = false;
             tlpProcess.running = true;
         }
+    }
+
+    Popout {
+        id: tlpPopout
+
+        anchorItem: tlpPill
+        show: tlpPill.hovered || tlpPopout.popoutHovered
+        borderColor: Colors.lavender
+
+        Text {
+            text: "Power"
+            color: Colors.subtext0
+            font.family: "JetBrainsMono Nerd Font Propo"
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+        }
+
+        Row {
+            spacing: 10
+
+            Text {
+                text: tlpPill.icon
+                color: Colors.lavender
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 22
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Column {
+                spacing: 2
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                    text: tlpPill.onAc ? "AC power" : "Battery power"
+                    color: Colors.text
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    text: "TLP managed"
+                    color: Colors.subtext0
+                    font.family: "JetBrainsMono Nerd Font Propo"
+                    font.pixelSize: 11
+                }
+
+            }
+
+        }
+
+        Text {
+            width: 220
+            text: tlpPill.onAc ? "Laptop is plugged in. TLP uses the AC profile." : "Running on battery. TLP uses the BAT profile."
+            color: Colors.overlay1
+            font.family: "JetBrainsMono Nerd Font Propo"
+            font.pixelSize: 11
+            wrapMode: Text.Wrap
+        }
+
+        Rectangle {
+            width: 220
+            height: 28
+            radius: 8
+            color: tlpBtnHover.hovered ? Colors.surface1 : Colors.surface0
+
+            HoverHandler {
+                id: tlpBtnHover
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "Show tlp-stat"
+                color: Colors.lavender
+                font.family: "JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Quickshell.execDetached(["kitty", "--hold", "-e", "tlp-stat", "-s"])
+            }
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: 120
+                }
+
+            }
+
+        }
+
     }
 
     MouseArea {

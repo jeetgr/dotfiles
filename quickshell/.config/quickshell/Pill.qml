@@ -11,7 +11,6 @@ Rectangle {
     property color iconColor: label.color
     property bool hovered: hoverHandler.hovered
     property string tooltipText: ""
-
     default property alias contentData: content.data
 
     Layout.preferredWidth: row.width + 24
@@ -40,7 +39,9 @@ Rectangle {
             NumberAnimation {
                 duration: 150
             }
+
         }
+
     }
 
     Row {

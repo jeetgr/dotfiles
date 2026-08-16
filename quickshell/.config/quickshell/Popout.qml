@@ -1,14 +1,19 @@
 import QtQuick
 import Quickshell
 
+// Hover popout anchored under a bar pill. Stays open while the cursor is on the
+// pill or the popout itself (close delay bridges the gap when moving between).
 PopupWindow {
     id: popup
 
     required property Item anchorItem
-    property string text: ""
     property bool show: false
-    property int delayMs: 300
+    property int openDelayMs: 220
+    property int closeDelayMs: 220
+    property color borderColor: Colors.accent
     property bool showInternal: false
+    property bool popoutHovered: hoverHandler.hovered
+    default property alias contentData: body.data
 
     function reposition() {
         if (!anchorItem || !anchorItem.QsWindow || !anchorItem.QsWindow.window)
@@ -25,13 +30,14 @@ PopupWindow {
     implicitWidth: box.width
     implicitHeight: box.height
     color: "transparent"
-    visible: showInternal && text.length > 0
+    visible: showInternal
     onShowChanged: {
         if (show) {
-            delayTimer.restart();
+            closeTimer.stop();
+            openTimer.restart();
         } else {
-            delayTimer.stop();
-            showInternal = false;
+            openTimer.stop();
+            closeTimer.restart();
         }
     }
     onVisibleChanged: {
@@ -39,39 +45,52 @@ PopupWindow {
             reposition();
 
     }
+    onWidthChanged: {
+        if (visible)
+            reposition();
+
+    }
 
     Timer {
-        id: delayTimer
+        id: openTimer
 
-        interval: popup.delayMs
+        interval: popup.openDelayMs
         onTriggered: {
             popup.reposition();
             popup.showInternal = true;
         }
     }
 
+    Timer {
+        id: closeTimer
+
+        interval: popup.closeDelayMs
+        onTriggered: {
+            if (!popup.show)
+                popup.showInternal = false;
+
+        }
+    }
+
     Rectangle {
         id: box
 
-        width: Math.min(420, tipLabel.implicitWidth + 24)
-        height: tipLabel.implicitHeight + 16
-        radius: 10
+        width: Math.max(180, body.implicitWidth + 28)
+        height: body.implicitHeight + 24
+        radius: 12
         color: Colors.mantle
-        border.color: Colors.accent
+        border.color: popup.borderColor
         border.width: 1
 
-        Text {
-            id: tipLabel
+        HoverHandler {
+            id: hoverHandler
+        }
+
+        Column {
+            id: body
 
             anchors.centerIn: parent
-            width: Math.min(396, implicitWidth)
-            text: popup.text
-            color: Colors.text
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 12
-            font.weight: Font.DemiBold
-            wrapMode: Text.Wrap
-            horizontalAlignment: Text.AlignLeft
+            spacing: 8
         }
 
     }

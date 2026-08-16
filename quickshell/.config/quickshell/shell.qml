@@ -2,9 +2,11 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
 
 ShellRoot {
+    // Touch singleton early so pills can call Osd during first paint.
+    readonly property bool _osdReady: !!Osd
+
     Scope {
         Variants {
             model: Quickshell.screens
@@ -39,56 +41,45 @@ ShellRoot {
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
+                    ActiveWindowPill {
+                        id: activeWindow
+
+                        anchors.left: workspaces.right
+                        anchors.leftMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+                        maxWidth: {
+                            let left = workspaces.x + workspaces.width + 6;
+                            let room = clock.x - left - 18;
+                            // Share left-of-clock space with media when both visible.
+                            return Math.max(0, room * 0.55);
+                        }
+                        z: 1
+                    }
+
                     ClockWidget {
                         id: clock
 
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.verticalCenter: parent.verticalCenter
+                        z: 2
                     }
 
-                    Rectangle {
-                        id: windowPill
-
-                        readonly property string titleText: {
-                            let toplevel = Hyprland.activeToplevel;
-                            let focusedWs = Hyprland.focusedMonitor && Hyprland.focusedMonitor.activeWorkspace;
-                            if (toplevel && toplevel.title && focusedWs && toplevel.workspace && toplevel.workspace.id === focusedWs.id)
-                                return toplevel.title;
-                            return "";
-                        }
-                        readonly property real maxWidth: Math.max(0, clock.x - (workspaces.x + workspaces.width) - 12)
-
-                        anchors.left: workspaces.right
+                    MediaPill {
+                        anchors.left: activeWindow.visible ? activeWindow.right : workspaces.right
                         anchors.leftMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: titleText.length > 0 && maxWidth > 24
-                        width: Math.min(windowTitle.implicitWidth + 24, maxWidth)
-                        height: 28
-                        radius: 14
-                        color: Colors.surface0
-
-                        Text {
-                            id: windowTitle
-
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            verticalAlignment: Text.AlignVCenter
-                            text: windowPill.titleText
-                            font.family: "JetBrainsMono Nerd Font Propo"
-                            font.pixelSize: 14
-                            font.weight: Font.Medium
-                            color: Colors.subtext1
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
+                        maxWidth: {
+                            let leftEdge = activeWindow.visible ? (activeWindow.x + activeWindow.width) : (workspaces.x + workspaces.width);
+                            return Math.max(0, clock.x - leftEdge - 18);
                         }
-
+                        z: 1
                     }
 
                     RowLayout {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 6
+                        z: 1
 
                         CpuPill {
                         }
@@ -100,6 +91,9 @@ ShellRoot {
                         }
 
                         VolumePill {
+                        }
+
+                        MicPill {
                         }
 
                         BluetoothPill {
@@ -117,12 +111,23 @@ ShellRoot {
                         TrayWidget {
                         }
 
+                        PowerPill {
+                        }
+
                     }
 
                 }
 
             }
 
+        }
+
+    }
+
+    LazyLoader {
+        active: Osd.visible
+
+        OsdWindow {
         }
 
     }

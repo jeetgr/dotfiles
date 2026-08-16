@@ -1,103 +1,113 @@
 {
-    "layer": "top",
-    "position": "top",
-    "height": 36,
-    "margin-top": 6,
-    "margin-left": 10,
-    "margin-right": 10,
-    "spacing": 0,
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "margin-top": 6,
+  "margin-left": 10,
+  "margin-right": 10,
+  "spacing": 0,
 
-    "modules-left": ["hyprland/workspaces", "hyprland/window"],
-    "modules-center": ["clock"],
-    "modules-right": ["cpu", "memory", "backlight", "pulseaudio", "bluetooth", "network", "custom/tlp", "battery", "tray"],
+  "modules-left": ["hyprland/workspaces", "hyprland/window"],
+  "modules-center": ["clock"],
+  "modules-right": [
+    "cpu",
+    "memory",
+    "backlight",
+    "pulseaudio",
+    "bluetooth",
+    "network",
+    "custom/tlp",
+    "battery",
+    "tray",
+  ],
 
-    "hyprland/workspaces": {
-        "format": "{name}",
-        "persistent-workspaces": {
-            "*": 5
-        },
-	"on-click": "activate"
+  "hyprland/workspaces": {
+    "format": "{name}",
+    "persistent-workspaces": {
+      "*": 5,
     },
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({workspace = 1})'",
+  },
 
-    "hyprland/window": {
-        "format": "{title}",
-        "max-length": 40,
-        "separate-outputs": true
+  "hyprland/window": {
+    "format": "{title}",
+    "max-length": 40,
+    "separate-outputs": true,
+  },
+
+  "clock": {
+    "format": "  {:%H:%M}",
+    "format-alt": "  {:%A, %d %B %Y}",
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+  },
+
+  "cpu": {
+    "format": "  {usage}%",
+    "tooltip": true,
+    "interval": 2,
+    "on-click": "missioncenter",
+  },
+
+  "memory": {
+    "format": "  {used:0.1f}G",
+    "tooltip-format": "RAM: {used:0.1f}G / {total:0.1f}G ({percentage}%)",
+    "on-click": "kitty --class btop-float -e btop",
+    "interval": 2,
+  },
+
+  "backlight": {
+    "format": "{icon}  {percent}%",
+    "format-icons": ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"],
+    "on-scroll-up": "brightnessctl set 5%+",
+    "on-scroll-down": "brightnessctl set 5%-",
+  },
+
+  "pulseaudio": {
+    "format": "{icon}  {volume}%",
+    "format-muted": "  muted",
+    "format-icons": {
+      "headphone": "",
+      "default": ["", "", ""],
     },
+    "on-click": "pwvucontrol",
+    "scroll-step": 5,
+  },
 
-    "clock": {
-        "format": "  {:%H:%M}",
-        "format-alt": "  {:%A, %d %B %Y}",
-        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+  "bluetooth": {
+    "format": "󰂯",
+    "format-disabled": "󰂲",
+    "format-connected": "󰂯 {device_alias}",
+    "format-connected-battery": "󰂯 {device_alias} {device_battery_percentage}%",
+    "tooltip-format": "{controller_alias}\t{controller_address}",
+    "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
+    "on-click": "blueman-manager",
+  },
+
+  "network": {
+    "format-wifi": "  {essid}",
+    "format-ethernet": "  {ifname}",
+    "format-disconnected": "󰤭  disconnected",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}/{cidr}",
+    "tooltip-format-ethernet": "{ifname}\n{ipaddr}/{cidr}",
+    "on-click": "nmgui",
+  },
+
+  "custom/tlp": {
+    "exec": "~/.config/waybar/scripts/tlp-status.sh",
+    "return-type": "json",
+    "interval": 5,
+    "on-click": "kitty --hold -e tlp-stat -s",
+  },
+
+  "battery": {
+    "format": "{icon}  {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+    "states": {
+      "warning": 30,
+      "critical": 15,
     },
-
-    "cpu": {
-        "format": "  {usage}%",
-        "tooltip": true,
-        "interval": 2,
-	    "on-click": "missioncenter"
-    },
-
-    "memory": {
-        "format": "  {used:0.1f}G",
-        "tooltip-format": "RAM: {used:0.1f}G / {total:0.1f}G ({percentage}%)",
-        "on-click": "kitty --class btop-float -e btop",
-        "interval": 2
-    },
-
-    "backlight": {
-        "format": "{icon}  {percent}%",
-        "format-icons": ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"],
-        "on-scroll-up": "brightnessctl set 5%+",
-        "on-scroll-down": "brightnessctl set 5%-"
-    },
-
-    "pulseaudio": {
-        "format": "{icon}  {volume}%",
-        "format-muted": "  muted",
-        "format-icons": {
-            "headphone": "",
-            "default": ["", "", ""]
-        },
-        "on-click": "pwvucontrol",
-        "scroll-step": 5
-    },
-
-    "bluetooth": {
-        "format": "󰂯",
-        "format-disabled": "󰂲",
-        "format-connected": "󰂯 {device_alias}",
-        "format-connected-battery": "󰂯 {device_alias} {device_battery_percentage}%",
-        "tooltip-format": "{controller_alias}\t{controller_address}",
-        "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
-        "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-        "on-click": "blueman-manager"
-    },
-
-    "network": {
-        "format-wifi": "  {essid}",
-        "format-ethernet": "  {ifname}",
-        "format-disconnected": "󰤭  disconnected",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}/{cidr}",
-        "tooltip-format-ethernet": "{ifname}\n{ipaddr}/{cidr}",
-        "on-click": "nmgui"
-    },
-
-    "custom/tlp": {
-	"exec": "~/.config/waybar/scripts/tlp-status.sh",
-	"return-type": "json",
-	"interval": 5,
-	"on-click": "kitty --hold -e tlp-stat -s"
-     },
-
-    "battery": {
-        "format": "{icon}  {capacity}%",
-        "format-charging": "󰂄 {capacity}%",
-        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
-        "states": {
-            "warning": 30,
-            "critical": 15
-        },
-        "tooltip-format": "{timeTo}"
-    }
+    "tooltip-format": "{timeTo}",
+  },
 }

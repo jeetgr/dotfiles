@@ -71,6 +71,15 @@ window#waybar {
   transition: all 0.25s ease-in-out;
 }
 
+/* occupied, not focused */
+#workspaces button.empty {
+  color: @overlay0;
+}
+
+#workspaces button:not(.empty):not(.active) {
+  color: @green;
+}
+
 #workspaces button.active {
   color: @base;
   background-color: @accent;

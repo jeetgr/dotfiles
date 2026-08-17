@@ -6,6 +6,6 @@ return {
 	terminal = "kitty",
 	fileManager = "thunar",
 	browser = "google-chrome-stable",
-	launcher = "rofi -show drun -show-icons || pkill rofi",
-	runner = "rofi -show run || pkill rofi",
+	launcher = "qs ipc call launcher toggle",
+	runner = "qs ipc call launcher openRun",
 }

@@ -67,8 +67,8 @@ PopupWindow {
             width: Math.min(396, implicitWidth)
             text: popup.text
             color: Colors.text
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 12
+            font.family: Tokens.fontFamily
+            font.pixelSize: Tokens.fontBody
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignLeft

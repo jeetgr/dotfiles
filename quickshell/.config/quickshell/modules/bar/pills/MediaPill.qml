@@ -1,11 +1,10 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell.Services.Mpris
+import qs.components
 
 Rectangle {
     id: root
 
-    // Cap from shell so we never reach the centered clock.
     property real maxWidth: 220
     readonly property var player: {
         let all = Mpris.players.values || [];
@@ -42,9 +41,9 @@ Rectangle {
     readonly property real labelMax: Math.max(40, maxWidth - 24 - 17 - 6)
 
     visible: usable && maxWidth > 64
-    height: 28
+    height: Tokens.pillHeight
     width: Math.min(contentRow.width + 24, maxWidth)
-    radius: 14
+    radius: Tokens.pillRadius
     color: Colors.surface0
     clip: true
 
@@ -59,20 +58,16 @@ Rectangle {
         show: root.hovered || mediaPopout.popoutHovered
         borderColor: Colors.mauve
 
-        Text {
+        PopoutTitle {
             text: "Now playing"
-            color: Colors.subtext0
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
         }
 
         Text {
-            width: 240
+            width: Tokens.popoutWidthWide
             text: root.player ? (root.player.trackTitle || "Unknown track") : ""
             color: Colors.text
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 13
+            font.family: Tokens.fontFamily
+            font.pixelSize: Tokens.fontTitle
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
             maximumLineCount: 2
@@ -81,15 +76,15 @@ Rectangle {
 
         Column {
             spacing: 4
-            width: 240
+            width: Tokens.popoutWidthWide
 
             Text {
                 visible: root.player && (root.player.trackArtist || "").length > 0
                 width: parent.width
                 text: root.player ? root.player.trackArtist : ""
                 color: Colors.mauve
-                font.family: "JetBrainsMono Nerd Font Propo"
-                font.pixelSize: 12
+                font.family: Tokens.fontFamily
+                font.pixelSize: Tokens.fontBody
                 elide: Text.ElideRight
             }
 
@@ -98,8 +93,8 @@ Rectangle {
                 width: parent.width
                 text: root.player ? root.player.trackAlbum : ""
                 color: Colors.subtext0
-                font.family: "JetBrainsMono Nerd Font Propo"
-                font.pixelSize: 11
+                font.family: Tokens.fontFamily
+                font.pixelSize: Tokens.fontCaption
                 elide: Text.ElideRight
             }
 
@@ -109,16 +104,15 @@ Rectangle {
                     if (!root.player)
                         return "";
 
-                    let bits = [];
-                    bits.push(root.player.isPlaying ? "Playing" : "Paused");
+                    let bits = [root.player.isPlaying ? "Playing" : "Paused"];
                     if (root.player.identity)
                         bits.push(root.player.identity);
 
                     return bits.join("  ·  ");
                 }
                 color: Colors.overlay0
-                font.family: "JetBrainsMono Nerd Font Propo"
-                font.pixelSize: 11
+                font.family: Tokens.fontFamily
+                font.pixelSize: Tokens.fontCaption
                 elide: Text.ElideRight
             }
 
@@ -127,87 +121,43 @@ Rectangle {
         Row {
             spacing: 8
 
-            Rectangle {
-                width: 72
-                height: 28
-                radius: 8
-                color: prevHover.hovered ? Colors.surface1 : Colors.surface0
-                opacity: root.player && root.player.canGoPrevious ? 1 : 0.4
+            PopoutButton {
+                icon: "󰒮"
+                text: ""
+                accent: Colors.mauve
+                buttonWidth: 72
+                enabled: !!(root.player && root.player.canGoPrevious)
+                onClicked: {
+                    if (root.player)
+                        root.player.previous();
 
-                HoverHandler {
-                    id: prevHover
                 }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "󰒮"
-                    color: Colors.mauve
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 16
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: root.player && root.player.canGoPrevious
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.player.previous()
-                }
-
             }
 
-            Rectangle {
-                width: 72
-                height: 28
-                radius: 8
-                color: playHover.hovered ? Colors.surface1 : Colors.surface0
+            PopoutButton {
+                icon: root.playIcon
+                text: ""
+                accent: Colors.mauve
+                buttonWidth: 72
+                enabled: !!(root.player && root.player.canTogglePlaying)
+                onClicked: {
+                    if (root.player)
+                        root.player.togglePlaying();
 
-                HoverHandler {
-                    id: playHover
                 }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.playIcon
-                    color: Colors.mauve
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 16
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: root.player && root.player.canTogglePlaying
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.player.togglePlaying()
-                }
-
             }
 
-            Rectangle {
-                width: 72
-                height: 28
-                radius: 8
-                color: nextHover.hovered ? Colors.surface1 : Colors.surface0
-                opacity: root.player && root.player.canGoNext ? 1 : 0.4
+            PopoutButton {
+                icon: "󰒭"
+                text: ""
+                accent: Colors.mauve
+                buttonWidth: 72
+                enabled: !!(root.player && root.player.canGoNext)
+                onClicked: {
+                    if (root.player)
+                        root.player.next();
 
-                HoverHandler {
-                    id: nextHover
                 }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "󰒭"
-                    color: Colors.mauve
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 16
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: root.player && root.player.canGoNext
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.player.next()
-                }
-
             }
 
         }
@@ -235,14 +185,14 @@ Rectangle {
 
         z: 2
         anchors.centerIn: parent
-        spacing: 6
+        spacing: Tokens.rowGap
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: root.playIcon
             color: Colors.mauve
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 17
+            font.family: Tokens.fontFamily
+            font.pixelSize: Tokens.fontIcon
         }
 
         Text {
@@ -250,8 +200,8 @@ Rectangle {
             width: Math.min(implicitWidth, root.labelMax)
             text: root.labelText
             color: Colors.mauve
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 14
+            font.family: Tokens.fontFamily
+            font.pixelSize: Tokens.fontLabel
             font.weight: Font.DemiBold
             elide: Text.ElideRight
             maximumLineCount: 1

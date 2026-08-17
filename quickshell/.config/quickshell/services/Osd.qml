@@ -1,4 +1,5 @@
 import QtQuick
+import qs.components
 pragma Singleton
 
 QtObject {
@@ -10,11 +11,6 @@ QtObject {
     property color accent: Colors.sky
     property string caption: ""
     property Timer hideTimer
-
-    hideTimer: Timer {
-        interval: 1400
-        onTriggered: root.visible = false
-    }
 
     function push(icon, value, accent, caption) {
         root.icon = icon;
@@ -41,6 +37,11 @@ QtObject {
         let icons = ["󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠"];
         let index = Math.min(icons.length - 1, Math.floor(percent / 100 * icons.length));
         push(icons[index], percent, Colors.yellow, Math.round(percent) + "%");
+    }
+
+    hideTimer: Timer {
+        interval: 1400
+        onTriggered: root.visible = false
     }
 
 }

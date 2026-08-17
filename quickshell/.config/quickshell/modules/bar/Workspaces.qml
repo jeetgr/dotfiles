@@ -3,8 +3,9 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Widgets
+import qs.components
+import qs.services
 
-// Outer surface0 chip; button size is fixed (no grow when windows appear).
 Rectangle {
     id: root
 
@@ -31,72 +32,11 @@ Rectangle {
 
     }
 
-    function iconForToplevel(t) {
-        let cls = "";
-        if (t.lastIpcObject && t.lastIpcObject.class)
-            cls = String(t.lastIpcObject.class);
-        else if (t.wayland && t.wayland.appId)
-            cls = String(t.wayland.appId);
-        if (!cls)
-            return Quickshell.iconPath("application-x-executable");
-
-        if (Quickshell.hasThemeIcon(cls))
-            return Quickshell.iconPath(cls);
-
-        let lower = cls.toLowerCase();
-        if (Quickshell.hasThemeIcon(lower))
-            return Quickshell.iconPath(lower);
-
-        let shortName = lower.split(".").pop();
-        if (shortName && Quickshell.hasThemeIcon(shortName))
-            return Quickshell.iconPath(shortName);
-
-        return Quickshell.iconPath(cls, "application-x-executable");
-    }
-
-    function collectWindows(wsId, hyprWorkspace) {
-        function addWindow(t) {
-            if (!t)
-                return ;
-
-            let title = t.title || (t.wayland && t.wayland.title) || (t.lastIpcObject && t.lastIpcObject.title) || "";
-            let cls = (t.lastIpcObject && t.lastIpcObject.class) || (t.wayland && t.wayland.appId) || "";
-            let key = (cls || "") + "|" + (title || "");
-            if (seen[key])
-                return ;
-
-            seen[key] = true;
-            windows.push({
-                "title": title,
-                "className": cls,
-                "icon": root.iconForToplevel(t)
-            });
-        }
-
-        let windows = [];
-        let seen = {
-        };
-        if (hyprWorkspace && hyprWorkspace.toplevels) {
-            let list = hyprWorkspace.toplevels.values || [];
-            for (let i = 0; i < list.length; i++) addWindow(list[i])
-        }
-        if (windows.length === 0 && Hyprland.toplevels) {
-            let all = Hyprland.toplevels.values || [];
-            for (let i = 0; i < all.length; i++) {
-                let t = all[i];
-                if (t.workspace && t.workspace.id === wsId)
-                    addWindow(t);
-
-            }
-        }
-        return windows;
-    }
-
     implicitWidth: row.implicitWidth + 12
-    implicitHeight: 28
+    implicitHeight: Tokens.pillHeight
     width: implicitWidth
     height: implicitHeight
-    radius: 14
+    radius: Tokens.pillRadius
     color: Colors.surface0
 
     RowLayout {
@@ -119,19 +59,10 @@ Rectangle {
                 property bool isActive: Hyprland.focusedMonitor && Hyprland.focusedMonitor.activeWorkspace && Hyprland.focusedMonitor.activeWorkspace.id === wsId
                 property bool isOccupied: hyprWorkspace !== undefined
                 property bool hovered: mouseArea.containsMouse
-                property var windows: root.collectWindows(wsId, hyprWorkspace)
+                property var windows: Windows.collectWindows(wsId, hyprWorkspace)
                 property int extraWindows: Math.max(0, windows.length - root.maxWindowIcons)
-                property string statusLabel: {
-                    if (isActive)
-                        return "Active";
+                property string statusLabel: isActive ? "Active" : (!isOccupied ? "Empty" : "Occupied")
 
-                    if (!isOccupied)
-                        return "Empty";
-
-                    return "Occupied";
-                }
-
-                // Fixed width so empty (number) vs occupied (icons) doesn't shift layout.
                 Layout.preferredWidth: 28
                 Layout.preferredHeight: 20
                 Layout.maximumWidth: 28
@@ -139,13 +70,12 @@ Rectangle {
                 radius: 10
                 color: (isActive || hovered) ? Colors.accent : "transparent"
 
-                // Empty → number only. Occupied → icons only (no number + icon clutter).
                 Text {
                     anchors.centerIn: parent
                     visible: wsBtn.windows.length === 0
                     text: wsBtn.wsId
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 14
+                    font.family: Tokens.fontFamily
+                    font.pixelSize: Tokens.fontLabel
                     font.weight: Font.DemiBold
                     color: (wsBtn.isActive || wsBtn.hovered) ? Colors.base : Colors.overlay0
 
@@ -181,7 +111,7 @@ Rectangle {
                     Text {
                         visible: wsBtn.extraWindows > 0
                         text: "+" + (wsBtn.extraWindows + 1)
-                        font.family: "JetBrainsMono Nerd Font Propo"
+                        font.family: Tokens.fontFamily
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
                         color: (wsBtn.isActive || wsBtn.hovered) ? Colors.base : Colors.subtext0
@@ -197,75 +127,33 @@ Rectangle {
                     show: wsBtn.hovered || wsPopout.popoutHovered
                     borderColor: Colors.mauve
 
-                    Text {
+                    PopoutTitle {
                         text: "Workspace " + wsBtn.wsId
-                        color: Colors.subtext0
-                        font.family: "JetBrainsMono Nerd Font Propo"
-                        font.pixelSize: 11
-                        font.weight: Font.DemiBold
                     }
 
-                    Row {
-                        spacing: 10
+                    PopoutHeader {
+                        title: wsBtn.statusLabel
+                        subtitle: {
+                            let bits = [];
+                            if (wsBtn.hyprWorkspace && wsBtn.hyprWorkspace.urgent)
+                                bits.push("urgent");
 
-                        Rectangle {
-                            width: 28
-                            height: 28
-                            radius: 8
-                            color: wsBtn.isActive ? Colors.accent : Colors.surface0
+                            if (wsBtn.hyprWorkspace && wsBtn.hyprWorkspace.hasFullscreen)
+                                bits.push("fullscreen");
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: wsBtn.wsId
-                                color: wsBtn.isActive ? Colors.base : Colors.text
-                                font.family: "JetBrainsMono Nerd Font Propo"
-                                font.pixelSize: 14
-                                font.weight: Font.DemiBold
-                            }
+                            if (wsBtn.hyprWorkspace && wsBtn.hyprWorkspace.monitor && wsBtn.hyprWorkspace.monitor.name)
+                                bits.push(wsBtn.hyprWorkspace.monitor.name);
 
+                            if (bits.length === 0)
+                                return wsBtn.windows.length + (wsBtn.windows.length === 1 ? " window" : " windows");
+
+                            return bits.join("  ·  ");
                         }
-
-                        Column {
-                            spacing: 2
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Text {
-                                text: wsBtn.statusLabel
-                                color: Colors.text
-                                font.family: "JetBrainsMono Nerd Font Propo"
-                                font.pixelSize: 13
-                                font.weight: Font.DemiBold
-                            }
-
-                            Text {
-                                text: {
-                                    let bits = [];
-                                    if (wsBtn.hyprWorkspace && wsBtn.hyprWorkspace.urgent)
-                                        bits.push("urgent");
-
-                                    if (wsBtn.hyprWorkspace && wsBtn.hyprWorkspace.hasFullscreen)
-                                        bits.push("fullscreen");
-
-                                    if (wsBtn.hyprWorkspace && wsBtn.hyprWorkspace.monitor && wsBtn.hyprWorkspace.monitor.name)
-                                        bits.push(wsBtn.hyprWorkspace.monitor.name);
-
-                                    if (bits.length === 0)
-                                        return wsBtn.windows.length + (wsBtn.windows.length === 1 ? " window" : " windows");
-
-                                    return bits.join("  ·  ");
-                                }
-                                color: Colors.subtext0
-                                font.family: "JetBrainsMono Nerd Font Propo"
-                                font.pixelSize: 11
-                            }
-
-                        }
-
                     }
 
                     Column {
                         visible: wsBtn.windows.length > 0
-                        spacing: 6
+                        spacing: Tokens.rowGap
                         width: 260
 
                         Repeater {
@@ -293,8 +181,8 @@ Rectangle {
                                         width: parent.width
                                         text: modelData.title || modelData.className || "Untitled"
                                         color: Colors.text
-                                        font.family: "JetBrainsMono Nerd Font Propo"
-                                        font.pixelSize: 12
+                                        font.family: Tokens.fontFamily
+                                        font.pixelSize: Tokens.fontBody
                                         font.weight: Font.DemiBold
                                         elide: Text.ElideRight
                                     }
@@ -304,7 +192,7 @@ Rectangle {
                                         width: parent.width
                                         text: modelData.className
                                         color: Colors.overlay0
-                                        font.family: "JetBrainsMono Nerd Font Propo"
+                                        font.family: Tokens.fontFamily
                                         font.pixelSize: 10
                                         elide: Text.ElideRight
                                     }
@@ -321,14 +209,14 @@ Rectangle {
                         visible: wsBtn.windows.length === 0
                         text: "No windows on this workspace"
                         color: Colors.overlay0
-                        font.family: "JetBrainsMono Nerd Font Propo"
-                        font.pixelSize: 11
+                        font.family: Tokens.fontFamily
+                        font.pixelSize: Tokens.fontCaption
                     }
 
                     Text {
                         text: "L-click focus · R-click move · scroll switch"
                         color: Colors.overlay0
-                        font.family: "JetBrainsMono Nerd Font Propo"
+                        font.family: Tokens.fontFamily
                         font.pixelSize: 10
                     }
 

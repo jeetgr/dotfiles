@@ -4,19 +4,23 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    // Material Design icons render small in Nerd Fonts — draw them larger than the label.
     property string icon: ""
     property alias text: label.text
     property alias textColor: label.color
     property color iconColor: label.color
     property bool hovered: hoverHandler.hovered
+    property bool flat: false
     property string tooltipText: ""
     default property alias contentData: content.data
 
-    Layout.preferredWidth: row.width + 24
-    Layout.preferredHeight: 28
-    radius: 14
-    color: Colors.surface0
+    readonly property int hPad: flat ? 14 : 24
+
+    implicitWidth: row.width + hPad
+    implicitHeight: Tokens.pillHeight
+    Layout.preferredWidth: implicitWidth
+    Layout.preferredHeight: implicitHeight
+    radius: flat ? 8 : Tokens.pillRadius
+    color: flat ? "transparent" : Colors.surface0
 
     HoverHandler {
         id: hoverHandler
@@ -49,7 +53,7 @@ Rectangle {
 
         z: 2
         anchors.centerIn: parent
-        spacing: 6
+        spacing: Tokens.rowGap
 
         Text {
             id: iconLabel
@@ -58,9 +62,8 @@ Rectangle {
             visible: root.icon.length > 0
             text: root.icon
             color: root.iconColor
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 17
-            font.weight: Font.Normal
+            font.family: Tokens.fontFamily
+            font.pixelSize: Tokens.fontIcon
         }
 
         Text {
@@ -68,8 +71,8 @@ Rectangle {
 
             anchors.verticalCenter: parent.verticalCenter
             visible: text.length > 0
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 14
+            font.family: Tokens.fontFamily
+            font.pixelSize: Tokens.fontLabel
             font.weight: Font.DemiBold
         }
 

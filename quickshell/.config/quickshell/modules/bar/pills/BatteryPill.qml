@@ -1,6 +1,7 @@
 import QtQuick
-import QtQuick.Layouts
+import Quickshell
 import Quickshell.Io
+import qs.components
 
 Pill {
     id: batteryPill
@@ -15,20 +16,13 @@ Pill {
     property int healthPercent: -1
     property string energyLabel: ""
     property string modelName: ""
-    property string stateLabel: {
-        if (charging)
-            return "Charging";
-
-        if (pluggedIn)
-            return "Plugged in";
-
-        return "Discharging";
-    }
+    property string stateLabel: charging ? "Charging" : (pluggedIn ? "Plugged in" : "Discharging")
+    property bool onAc: false
+    readonly property color restColor: flat ? "transparent" : Colors.surface0
 
     icon: {
         let icons = ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"];
-        let index = Math.min(9, Math.floor(capacity / 10));
-        return charging ? "󰂄" : icons[index];
+        return charging ? "󰂄" : icons[Math.min(9, Math.floor(capacity / 10))];
     }
     text: capacity + "%"
     textColor: isCritical ? criticalFg : (isWarning ? Colors.peach : (charging ? Colors.yellow : Colors.green))
@@ -39,7 +33,6 @@ Pill {
 
         property bool gotResult: false
 
-        // capacity|status|time|health|energy|energy_full|model
         command: ["bash", "-c", "bat=$(upower -e 2>/dev/null | awk '/battery_/{print; exit}'); if [ -z \"$bat\" ]; then echo missing; exit 0; fi; info=$(upower -i \"$bat\" 2>/dev/null); cap=$(echo \"$info\" | awk -F: '/percentage/ {gsub(/[% \\t]/,\"\",$2); print $2; exit}'); status=$(echo \"$info\" | awk -F: '/state/ {gsub(/^[ \\t]+/,\"\",$2); print $2; exit}'); time=$(echo \"$info\" | awk -F: '/time to empty|time to full/ {gsub(/^[ \\t]+/,\"\",$2); print $2; exit}'); health=$(echo \"$info\" | awk -F: '/^\\s*capacity:/ {gsub(/[% \\t]/,\"\",$2); print $2; exit}'); energy=$(echo \"$info\" | awk -F: '/^\\s*energy:/ {gsub(/^[ \\t]+/,\"\",$2); print $2; exit}'); energy_full=$(echo \"$info\" | awk -F: '/energy-full:/ {gsub(/^[ \\t]+/,\"\",$2); print $2; exit}'); model=$(echo \"$info\" | awk -F: '/model:/ {gsub(/^[ \\t]+/,\"\",$2); print $2; exit}'); echo \"${cap}|${status}|${time}|${health}|${energy}|${energy_full}|${model}\""]
         running: false
         onRunningChanged: {
@@ -73,12 +66,27 @@ Pill {
                 let energyFull = parts.length > 5 ? parts[5].trim() : "";
                 if (energy.length > 0 && energyFull.length > 0)
                     batteryPill.energyLabel = energy + " / " + energyFull;
-                else if (energy.length > 0)
-                    batteryPill.energyLabel = energy;
                 else
-                    batteryPill.energyLabel = "";
+                    batteryPill.energyLabel = energy;
                 batteryPill.modelName = parts.length > 6 ? parts.slice(6).join("|").trim() : "";
                 batteryProcess.gotResult = true;
+            }
+        }
+
+    }
+
+    Process {
+        id: tlpProcess
+
+        command: ["bash", "-c", "ac=$(find /sys/class/power_supply -maxdepth 1 -iname 'A*' | head -n1); if [ -n \"$ac\" ] && [ \"$(cat \"$ac/online\" 2>/dev/null)\" = 1 ]; then echo AC; else echo BAT; fi"]
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                let mode = line.trim();
+                if (mode === "AC" || mode === "BAT")
+                    batteryPill.onAc = mode === "AC";
+
             }
         }
 
@@ -92,6 +100,8 @@ Pill {
         onTriggered: {
             batteryProcess.running = false;
             batteryProcess.running = true;
+            tlpProcess.running = false;
+            tlpProcess.running = true;
         }
     }
 
@@ -102,151 +112,68 @@ Pill {
         show: batteryPill.hovered || batteryPopout.popoutHovered
         borderColor: batteryPill.isCritical ? Colors.red : (batteryPill.charging ? Colors.yellow : Colors.green)
 
-        Text {
+        PopoutTitle {
             text: "Battery"
-            color: Colors.subtext0
-            font.family: "JetBrainsMono Nerd Font Propo"
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
         }
 
-        Row {
-            spacing: 10
-
-            Text {
-                text: batteryPill.icon
-                color: batteryPill.textColor
-                font.family: "JetBrainsMono Nerd Font Propo"
-                font.pixelSize: 22
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Column {
-                spacing: 2
-                anchors.verticalCenter: parent.verticalCenter
-
-                Text {
-                    text: batteryPill.capacity + "%  ·  " + batteryPill.stateLabel
-                    color: Colors.text
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 13
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    visible: batteryPill.modelName.length > 0
-                    text: batteryPill.modelName
-                    color: Colors.subtext0
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                }
-
-            }
-
+        PopoutHeader {
+            icon: batteryPill.icon
+            iconColor: batteryPill.textColor
+            title: batteryPill.capacity + "%  ·  " + batteryPill.stateLabel
+            subtitle: batteryPill.modelName
         }
 
-        Rectangle {
-            width: 240
-            height: 8
-            radius: 4
-            color: Colors.surface0
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * (batteryPill.capacity / 100)
-                radius: parent.radius
-                color: batteryPill.textColor
-            }
-
+        MeterBar {
+            barWidth: Tokens.popoutWidthWide
+            value: batteryPill.capacity / 100
+            fill: batteryPill.textColor
         }
 
         Column {
-            spacing: 6
-            width: 240
+            spacing: Tokens.rowGap
+            width: Tokens.popoutWidthWide
 
-            RowLayout {
-                width: parent.width
-
-                Text {
-                    text: batteryPill.charging ? "Time to full" : "Time remaining"
-                    color: Colors.overlay0
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: batteryPill.timeLabel.length > 0 ? batteryPill.timeLabel : "unavailable"
-                    color: Colors.text
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    horizontalAlignment: Text.AlignRight
-                    elide: Text.ElideLeft
-                }
-
+            PopoutRow {
+                label: batteryPill.charging ? "Time to full" : "Time remaining"
+                value: batteryPill.timeLabel.length > 0 ? batteryPill.timeLabel : "unavailable"
             }
 
-            RowLayout {
-                visible: batteryPill.healthPercent >= 0
-                width: parent.width
-
-                Text {
-                    text: "Health"
-                    color: Colors.overlay0
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: batteryPill.healthPercent + "%"
-                    color: batteryPill.healthPercent < 70 ? Colors.peach : Colors.green
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    horizontalAlignment: Text.AlignRight
-                }
-
+            PopoutRow {
+                rowVisible: batteryPill.healthPercent >= 0
+                label: "Health"
+                value: batteryPill.healthPercent + "%"
+                valueColor: batteryPill.healthPercent < 70 ? Colors.peach : Colors.green
             }
 
-            RowLayout {
-                visible: batteryPill.energyLabel.length > 0
-                width: parent.width
-
-                Text {
-                    text: "Energy"
-                    color: Colors.overlay0
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: batteryPill.energyLabel
-                    color: Colors.text
-                    font.family: "JetBrainsMono Nerd Font Propo"
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    horizontalAlignment: Text.AlignRight
-                    elide: Text.ElideLeft
-                }
-
+            PopoutRow {
+                rowVisible: batteryPill.energyLabel.length > 0
+                label: "Energy"
+                value: batteryPill.energyLabel
             }
 
+            PopoutRow {
+                label: "Profile"
+                value: batteryPill.onAc ? "AC" : "BAT"
+                valueColor: Colors.lavender
+            }
+
+        }
+
+        PopoutButton {
+            text: "Show tlp-stat"
+            accent: Colors.lavender
+            buttonWidth: Tokens.popoutWidthWide
+            onClicked: Quickshell.execDetached(["kitty", "--hold", "-e", "tlp-stat", "-s"])
         }
 
     }
 
-    // Match waybar: blink background + foreground together (~1.5s cycle).
     SequentialAnimation {
         running: batteryPill.isCritical
         loops: Animation.Infinite
         onRunningChanged: {
             if (!running) {
-                batteryPill.color = Colors.surface0;
+                batteryPill.color = batteryPill.restColor;
                 batteryPill.criticalFg = Colors.red;
             }
         }
@@ -272,7 +199,7 @@ Pill {
             ColorAnimation {
                 target: batteryPill
                 property: "color"
-                to: Colors.surface0
+                to: batteryPill.restColor
                 duration: 750
             }
 

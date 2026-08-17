@@ -77,7 +77,7 @@ PopupWindow {
 
         width: Math.max(180, body.implicitWidth + 28)
         height: body.implicitHeight + 24
-        radius: 12
+        radius: Tokens.popoutRadius
         color: Colors.mantle
         border.color: popup.borderColor
         border.width: 1
@@ -90,7 +90,7 @@ PopupWindow {
             id: body
 
             anchors.centerIn: parent
-            spacing: 8
+            spacing: Tokens.popoutGap
         }
 
     }

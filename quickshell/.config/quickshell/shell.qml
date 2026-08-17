@@ -5,7 +5,6 @@ import Quickshell.Io
 import qs.modules.bar
 import qs.modules.osd
 import qs.modules.launcher
-import qs.modules.power
 import qs.services
 
 ShellRoot {
@@ -39,14 +38,6 @@ ShellRoot {
 
     }
 
-    LazyLoader {
-        active: PowerMenu.visible
-
-        PowerWindow {
-        }
-
-    }
-
     IpcHandler {
         target: "launcher"
 
@@ -70,21 +61,25 @@ ShellRoot {
             Launcher.openClip();
         }
 
+        function openPower(): void {
+            Launcher.openPower();
+        }
+
     }
 
     IpcHandler {
         target: "powermenu"
 
         function toggle(): void {
-            PowerMenu.toggle();
+            Launcher.openPower();
         }
 
         function open(): void {
-            PowerMenu.open();
+            Launcher.openPower();
         }
 
         function close(): void {
-            PowerMenu.close();
+            Launcher.close();
         }
 
     }

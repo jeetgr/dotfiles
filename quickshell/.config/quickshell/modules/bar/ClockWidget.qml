@@ -101,14 +101,6 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 clip: true
 
-                Behavior on width {
-                    NumberAnimation {
-                        duration: root.swapMs
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: root.spatialEase
-                    }
-                }
-
                 Text {
                     id: timeLabel
 
@@ -163,6 +155,15 @@ Item {
                             duration: 200
                         }
 
+                    }
+
+                }
+
+                Behavior on width {
+                    NumberAnimation {
+                        duration: root.swapMs
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: root.spatialEase
                     }
 
                 }

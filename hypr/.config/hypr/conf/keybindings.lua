@@ -15,7 +15,7 @@ hl.bind(secondMod .. " + Space", hl.dsp.exec_cmd(progs.runner))
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("loginctl lock-session"))
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("qs ipc call powermenu toggle"))
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("qs ipc call launcher openPower"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-touchpad.sh"))
 

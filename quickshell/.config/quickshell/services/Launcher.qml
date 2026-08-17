@@ -29,11 +29,14 @@ QtObject {
         if (q.startsWith("="))
             return "calc";
 
+        if (q.startsWith(":"))
+            return "power";
+
         return "apps";
     }
     readonly property string needle: {
         let q = root.query;
-        if (q.startsWith(">") || q.startsWith(";") || q.startsWith("="))
+        if (q.startsWith(">") || q.startsWith(";") || q.startsWith("=") || q.startsWith(":"))
             return q.slice(1).replace(/^\s+/, "");
 
         return q.trim();
@@ -48,7 +51,10 @@ QtObject {
         if (root.mode === "calc")
             return "Evaluate…";
 
-        return "Search apps…    > run    ; clip    = calc";
+        if (root.mode === "power")
+            return "Lock, logout, suspend…";
+
+        return "Search apps…    > run    ; clip    = calc    : power";
     }
     readonly property string modeLabel: {
         if (root.mode === "run")
@@ -59,6 +65,9 @@ QtObject {
 
         if (root.mode === "calc")
             return "Calc";
+
+        if (root.mode === "power")
+            return "Power";
 
         return "Apps";
     }
@@ -72,6 +81,9 @@ QtObject {
         if (root.mode === "calc")
             return Colors.yellow;
 
+        if (root.mode === "power")
+            return Colors.red;
+
         return Colors.mauve;
     }
     readonly property string modeGlyph: {
@@ -83,6 +95,9 @@ QtObject {
 
         if (root.mode === "calc")
             return "󰃬";
+
+        if (root.mode === "power")
+            return "󰐥";
 
         return "󰀻";
     }
@@ -96,91 +111,9 @@ QtObject {
     }
     property string homeDir: Quickshell.env("HOME") || ""
     property Process mkdirProc
-
-    mkdirProc: Process {
-        command: ["mkdir", "-p", `${root.homeDir}/.local/state/quickshell`]
-        running: root.homeDir.length > 0
-    }
-
     property FileView frecencyFile
-
-    frecencyFile: FileView {
-        path: root.homeDir.length ? `${root.homeDir}/.local/state/quickshell/launcher-frecency.json` : ""
-        onLoaded: root.loadFrecency()
-        onPathChanged: {
-            if (path)
-                reload();
-
-        }
-    }
-
     property Process pathProc
-
-    pathProc: Process {
-        property var lines: []
-
-        command: ["bash", "-c", "compgen -c | awk 'NF && !seen[$0]++'"]
-        running: true
-        onRunningChanged: {
-            if (running)
-                lines = [];
-
-        }
-        onExited: {
-            let raw = pathProc.lines || [];
-            raw.sort((a, b) => {
-                return a.localeCompare(b);
-            });
-            root.pathCommands = raw;
-        }
-
-        stdout: SplitParser {
-            onRead: (line) => {
-                let name = line.trim();
-                if (name.length)
-                    pathProc.lines.push(name);
-
-            }
-        }
-
-    }
-
     property Process clipProc
-
-    clipProc: Process {
-        property var lines: []
-
-        command: ["cliphist", "list"]
-        running: false
-        onRunningChanged: {
-            if (running)
-                lines = [];
-
-        }
-        onExited: {
-            let out = [];
-            let raw = clipProc.lines || [];
-            for (let i = 0; i < raw.length; i++) {
-                let line = raw[i];
-                if (!line || !line.length)
-                    continue;
-
-                let tab = line.indexOf("\t");
-                out.push({
-                    "line": line,
-                    "preview": tab >= 0 ? line.slice(tab + 1) : line
-                });
-            }
-            root.clips = out;
-        }
-
-        stdout: SplitParser {
-            onRead: (line) => {
-                clipProc.lines = clipProc.lines.concat([line]);
-            }
-        }
-
-    }
 
     function fuzzyScore(query, text) {
         if (!text)
@@ -351,14 +284,14 @@ QtObject {
             });
             if (needle.length && !seen[needle])
                 out.unshift({
-                    "kind": "run",
-                    "title": needle,
-                    "subtitle": "Run in background",
-                    "icon": "",
-                    "glyph": "",
-                    "score": 5000,
-                    "command": needle
-                });
+                "kind": "run",
+                "title": needle,
+                "subtitle": "Run in background",
+                "icon": "",
+                "glyph": "",
+                "score": 5000,
+                "command": needle
+            });
 
         } else if (mode === "clip") {
             let clips = root.clips || [];
@@ -392,23 +325,40 @@ QtObject {
                 let value = root.evalMath(needle);
                 if (value === null)
                     out.push({
-                        "kind": "hint",
-                        "title": "Can't evaluate",
-                        "subtitle": "Numbers and + − * / % ( ) only",
-                        "icon": "",
-                        "glyph": "󰃬",
-                        "score": 0
-                    });
+                    "kind": "hint",
+                    "title": "Can't evaluate",
+                    "subtitle": "Numbers and + − * / % ( ) only",
+                    "icon": "",
+                    "glyph": "󰃬",
+                    "score": 0
+                });
                 else
                     out.push({
-                        "kind": "calc",
-                        "title": String(value),
-                        "subtitle": needle + "  →  copy",
-                        "icon": "",
-                        "glyph": "󰃬",
-                        "score": 1000,
-                        "value": String(value)
-                    });
+                    "kind": "calc",
+                    "title": String(value),
+                    "subtitle": needle + "  →  copy",
+                    "icon": "",
+                    "glyph": "󰃬",
+                    "score": 1000,
+                    "value": String(value)
+                });
+            }
+        } else if (mode === "power") {
+            let actions = PowerMenu.actions || [];
+            for (let i = 0; i < actions.length; i++) {
+                let a = actions[i];
+                if (needle.length && (a.label || "").toLowerCase().indexOf(needle.toLowerCase()) < 0 && (a.id || "").indexOf(needle.toLowerCase()) < 0)
+                    continue;
+
+                out.push({
+                    "kind": "power",
+                    "title": a.label,
+                    "subtitle": "Power",
+                    "icon": "",
+                    "glyph": a.glyph,
+                    "score": 1000 - i,
+                    "actionId": a.id
+                });
             }
         }
         let cap = mode === "run" ? 64 : root.maxResults;
@@ -438,6 +388,16 @@ QtObject {
         root.selectedIndex = 0;
         root.visible = true;
         root.refreshClips();
+    }
+
+    function openPower() {
+        if (root.visible && root.mode === "power") {
+            root.close();
+            return ;
+        }
+        root.query = ":";
+        root.selectedIndex = 0;
+        root.visible = true;
     }
 
     function close() {
@@ -483,6 +443,10 @@ QtObject {
             root.copyClip(item.line);
         else if (item.kind === "calc")
             root.copyText(item.value);
+        else if (item.kind === "power") {
+            PowerMenu.run(item.actionId);
+            root.close();
+        }
     }
 
     function launchApp(app) {
@@ -607,4 +571,84 @@ QtObject {
             root.selectedIndex = Math.max(0, root.results.length - 1);
 
     }
+
+    mkdirProc: Process {
+        command: ["mkdir", "-p", `${root.homeDir}/.local/state/quickshell`]
+        running: root.homeDir.length > 0
+    }
+
+    frecencyFile: FileView {
+        path: root.homeDir.length ? `${root.homeDir}/.local/state/quickshell/launcher-frecency.json` : ""
+        onLoaded: root.loadFrecency()
+        onPathChanged: {
+            if (path)
+                reload();
+
+        }
+    }
+
+    pathProc: Process {
+        property var lines: []
+
+        command: ["bash", "-c", "compgen -c | awk 'NF && !seen[$0]++'"]
+        running: true
+        onRunningChanged: {
+            if (running)
+                lines = [];
+
+        }
+        onExited: {
+            let raw = pathProc.lines || [];
+            raw.sort((a, b) => {
+                return a.localeCompare(b);
+            });
+            root.pathCommands = raw;
+        }
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                let name = line.trim();
+                if (name.length)
+                    pathProc.lines.push(name);
+
+            }
+        }
+
+    }
+
+    clipProc: Process {
+        property var lines: []
+
+        command: ["cliphist", "list"]
+        running: false
+        onRunningChanged: {
+            if (running)
+                lines = [];
+
+        }
+        onExited: {
+            let out = [];
+            let raw = clipProc.lines || [];
+            for (let i = 0; i < raw.length; i++) {
+                let line = raw[i];
+                if (!line || !line.length)
+                    continue;
+
+                let tab = line.indexOf("\t");
+                out.push({
+                    "line": line,
+                    "preview": tab >= 0 ? line.slice(tab + 1) : line
+                });
+            }
+            root.clips = out;
+        }
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                clipProc.lines = clipProc.lines.concat([line]);
+            }
+        }
+
+    }
+
 }

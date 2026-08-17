@@ -272,7 +272,7 @@ PanelWindow {
 
             Text {
                 Layout.fillWidth: true
-                text: "↑↓  move    Enter  select    Esc  close    > run    ; clip    = calc"
+                text: "↑↓  move    Enter  select    Esc  close    > run    ; clip    = calc    : power"
                 color: Colors.overlay0
                 font.family: Tokens.fontFamily
                 font.pixelSize: 10

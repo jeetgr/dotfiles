@@ -11,6 +11,7 @@ Pill {
     property int volumePercent: source && source.audio ? Math.round(source.audio.volume * 100) : 0
     property bool isMuted: source && source.audio ? source.audio.muted : true
     property string micIcon: (isMuted || volumePercent === 0) ? "󰍭" : "󰍬"
+    property bool osdReady: false
     property string sourceLabel: {
         if (!source)
             return "No input device";
@@ -36,9 +37,28 @@ Pill {
     text: ""
     textColor: isMuted ? Colors.overlay0 : Colors.pink
     iconColor: textColor
+    Component.onCompleted: Qt.callLater(() => {
+        micPill.osdReady = true;
+    })
 
     PwObjectTracker {
         objects: [Pipewire.defaultAudioSource]
+    }
+
+    Connections {
+        function onVolumeChanged() {
+            if (micPill.osdReady)
+                Osd.pushMic(micPill.volumePercent, micPill.isMuted);
+
+        }
+
+        function onMutedChanged() {
+            if (micPill.osdReady)
+                Osd.pushMic(micPill.volumePercent, micPill.isMuted);
+
+        }
+
+        target: micPill.source && micPill.source.audio ? micPill.source.audio : null
     }
 
     Popout {

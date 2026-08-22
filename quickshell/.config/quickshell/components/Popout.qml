@@ -8,8 +8,8 @@ PopupWindow {
 
     required property Item anchorItem
     property bool show: false
-    property int openDelayMs: 220
-    property int closeDelayMs: 220
+    property int openDelayMs: Tokens.popoutOpenDelayMs
+    property int closeDelayMs: Tokens.popoutCloseDelayMs
     property color borderColor: Colors.accent
     property bool showInternal: false
     property bool popoutHovered: hoverHandler.hovered

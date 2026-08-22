@@ -22,10 +22,9 @@ Pill {
     }
 
     icon: state === "disabled" ? "󰂲" : "󰂯"
-    text: ""
-    textColor: state === "connected" ? Colors.blue : Colors.overlay0
+    text: state === "connected" && batteryPercent >= 0 ? batteryPercent + "%" : ""
+    textColor: state === "connected" ? Colors.blue : Colors.subtext0
     iconColor: textColor
-    visible: state === "connected"
 
     Process {
         id: btProcess

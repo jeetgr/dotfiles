@@ -175,10 +175,57 @@ Item {
         MouseArea {
             id: clockMouse
 
+            property bool suppressPopout: false
+
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: clockPill.showDate = !clockPill.showDate
+            onClicked: {
+                clockPill.showDate = !clockPill.showDate;
+                suppressPopout = true;
+            }
+            onContainsMouseChanged: {
+                if (!containsMouse)
+                    suppressPopout = false;
+
+            }
+            onWheel: (event) => {
+                if (!calPopout.showInternal)
+                    return ;
+
+                calGrid.shiftMonth(event.angleDelta.y > 0 ? -1 : 1);
+                event.accepted = true;
+            }
+        }
+
+        Popout {
+            id: calPopout
+
+            anchorItem: clockPill
+            show: (clockMouse.containsMouse && !clockMouse.suppressPopout) || calPopout.popoutHovered
+            borderColor: Colors.mauve
+
+            PopoutHeader {
+                icon: "󰃭"
+                iconColor: Colors.mauve
+                title: Qt.formatDate(clock.currentTime, "dddd")
+                subtitle: Qt.formatDateTime(clock.currentTime, "dd MMMM yyyy  ·  hh:mm")
+            }
+
+            CalendarGrid {
+                id: calGrid
+
+                today: clock.currentTime
+                active: calPopout.showInternal
+            }
+
+            Text {
+                text: "click swaps date  ·  wheel changes month"
+                color: Colors.overlay0
+                font.family: Tokens.fontFamily
+                font.pixelSize: 10
+            }
+
         }
 
     }
@@ -190,20 +237,11 @@ Item {
     }
 
     Timer {
-        id: clockTimer
-
-        function alignToNextMinute() {
-            let now = new Date();
-            interval = Math.max(500, (60 - now.getSeconds()) * 1000 - now.getMilliseconds());
-        }
-
+        interval: 1000
         running: true
         repeat: true
-        onTriggered: {
-            clock.currentTime = new Date();
-            alignToNextMinute();
-        }
-        Component.onCompleted: alignToNextMinute()
+        triggeredOnStart: true
+        onTriggered: clock.currentTime = new Date()
     }
 
 }

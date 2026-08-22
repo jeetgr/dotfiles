@@ -12,10 +12,13 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(progs.fileManager))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(progs.browser))
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(progs.launcher))
 hl.bind(secondMod .. " + Space", hl.dsp.exec_cmd(progs.runner))
+hl.bind(mainMod .. " + Tab", hl.dsp.exec_cmd(progs.windows))
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("loginctl lock-session"))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("qs ipc call launcher openPower"))
+hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("qs ipc call notifications toggle"))
+hl.bind(mainMod .. " + SHIFT + slash", hl.dsp.exec_cmd("qs ipc call cheatsheet toggle"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-touchpad.sh"))
 
@@ -82,6 +85,8 @@ hl.define_submap("resize", function()
 	hl.bind("escape", hl.dsp.submap("reset"))
 	hl.bind("Return", hl.dsp.submap("reset"))
 end)
+
+hl.bind("Caps_Lock", hl.dsp.exec_cmd("qs ipc call osd caps"), { locked = true, non_consuming = true })
 
 hl.bind(
 	"XF86AudioRaiseVolume",

@@ -46,6 +46,46 @@ QtObject {
         return iconForClass(classOf(t));
     }
 
+    function addressOf(t) {
+        if (!t)
+            return "";
+
+        let addr = t.address || "";
+        if (!addr.length && t.lastIpcObject && t.lastIpcObject.address)
+            addr = String(t.lastIpcObject.address);
+
+        addr = String(addr).replace(/^0x/i, "");
+        return addr;
+    }
+
+    function workspaceLabel(t) {
+        if (!t || !t.workspace)
+            return "";
+
+        let name = t.workspace.name || "";
+        if (name.indexOf("special") === 0)
+            return "scratchpad";
+
+        let id = t.workspace.id;
+        if (id !== undefined && id !== null && id > 0)
+            return "ws " + id;
+
+        return name || "";
+    }
+
+    function isShellWindow(t) {
+        let cls = classOf(t).toLowerCase();
+        return cls === "quickshell" || cls.indexOf("quickshell") >= 0;
+    }
+
+    function selector(t) {
+        let addr = addressOf(t);
+        if (!addr.length)
+            return "";
+
+        return "address:0x" + addr;
+    }
+
     function collectWindows(wsId, hyprWorkspace) {
         let windows = [];
         let seen = {

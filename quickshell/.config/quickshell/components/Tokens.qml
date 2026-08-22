@@ -17,5 +17,7 @@ QtObject {
     readonly property int popoutWidth: 220
     readonly property int popoutWidthWide: 240
     readonly property int popoutGap: 8
+    readonly property int popoutOpenDelayMs: 450
+    readonly property int popoutCloseDelayMs: 220
     readonly property int rowGap: 6
 }

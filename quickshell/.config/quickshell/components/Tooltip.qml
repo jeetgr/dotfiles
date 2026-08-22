@@ -7,7 +7,7 @@ PopupWindow {
     required property Item anchorItem
     property string text: ""
     property bool show: false
-    property int delayMs: 300
+    property int delayMs: Tokens.popoutOpenDelayMs
     property bool showInternal: false
 
     function reposition() {

@@ -5,11 +5,15 @@ import Quickshell.Io
 import qs.modules.bar
 import qs.modules.osd
 import qs.modules.launcher
+import qs.modules.notifications
+import qs.modules.cheatsheet
 import qs.services
 
 ShellRoot {
     readonly property bool _osdReady: !!Osd
     readonly property bool _launcherReady: !!Launcher
+    readonly property bool _notificationsReady: !!Notifications
+    readonly property bool _cheatsheetReady: !!Cheatsheet
 
     Scope {
         Variants {
@@ -34,6 +38,30 @@ ShellRoot {
         active: Launcher.visible
 
         LauncherWindow {
+        }
+
+    }
+
+    LazyLoader {
+        active: Notifications.visible
+
+        NotificationWindow {
+        }
+
+    }
+
+    LazyLoader {
+        active: Notifications.popupCount > 0 && !Notifications.visible
+
+        NotificationPopup {
+        }
+
+    }
+
+    LazyLoader {
+        active: Cheatsheet.visible
+
+        CheatsheetWindow {
         }
 
     }
@@ -63,6 +91,61 @@ ShellRoot {
 
         function openPower(): void {
             Launcher.openPower();
+        }
+
+        function openWindows(): void {
+            Launcher.openWindows();
+        }
+
+    }
+
+    IpcHandler {
+        target: "notifications"
+
+        function toggle(): void {
+            Notifications.toggle();
+        }
+
+        function open(): void {
+            Notifications.open();
+        }
+
+        function close(): void {
+            Notifications.close();
+        }
+
+        function clear(): void {
+            Notifications.clearAll();
+        }
+
+    }
+
+    IpcHandler {
+        target: "osd"
+
+        function caps(): void {
+            Osd.pollCaps();
+        }
+
+        function copied(): void {
+            Osd.pushCopied("", false);
+        }
+
+    }
+
+    IpcHandler {
+        target: "cheatsheet"
+
+        function toggle(): void {
+            Cheatsheet.toggle();
+        }
+
+        function open(): void {
+            Cheatsheet.open();
+        }
+
+        function close(): void {
+            Cheatsheet.close();
         }
 
     }

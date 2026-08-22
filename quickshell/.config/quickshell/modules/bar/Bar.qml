@@ -110,6 +110,9 @@ PanelWindow {
             TrayWidget {
             }
 
+            NotificationPill {
+            }
+
             PowerPill {
             }
 

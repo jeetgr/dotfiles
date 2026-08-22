@@ -1,7 +1,9 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import qs.components
+import qs.services
 pragma Singleton
 
 QtObject {
@@ -17,6 +19,9 @@ QtObject {
         "commands": []
     })
     property var clips: []
+    property var pins: []
+    property int thumbRev: 0
+    property var pendingPin: null
     property var pathCommands: []
     readonly property string mode: {
         let q = root.query;
@@ -32,11 +37,14 @@ QtObject {
         if (q.startsWith(":"))
             return "power";
 
+        if (q.startsWith("#"))
+            return "windows";
+
         return "apps";
     }
     readonly property string needle: {
         let q = root.query;
-        if (q.startsWith(">") || q.startsWith(";") || q.startsWith("=") || q.startsWith(":"))
+        if (q.startsWith(">") || q.startsWith(";") || q.startsWith("=") || q.startsWith(":") || q.startsWith("#"))
             return q.slice(1).replace(/^\s+/, "");
 
         return q.trim();
@@ -54,7 +62,10 @@ QtObject {
         if (root.mode === "power")
             return "Lock, logout, suspend…";
 
-        return "Search apps…    > run    ; clip    = calc    : power";
+        if (root.mode === "windows")
+            return "Switch windows…";
+
+        return "Search apps…    > run    ; clip    = calc    : power    # windows";
     }
     readonly property string modeLabel: {
         if (root.mode === "run")
@@ -68,6 +79,9 @@ QtObject {
 
         if (root.mode === "power")
             return "Power";
+
+        if (root.mode === "windows")
+            return "Windows";
 
         return "Apps";
     }
@@ -84,6 +98,9 @@ QtObject {
         if (root.mode === "power")
             return Colors.red;
 
+        if (root.mode === "windows")
+            return Colors.sky;
+
         return Colors.mauve;
     }
     readonly property string modeGlyph: {
@@ -99,21 +116,32 @@ QtObject {
         if (root.mode === "power")
             return "󰐥";
 
+        if (root.mode === "windows")
+            return "󰖯";
+
         return "󰀻";
     }
     readonly property var results: {
         let _q = root.query;
         let _clips = root.clips;
+        let _pins = root.pins;
+        let _thumbRev = root.thumbRev;
         let _freq = root.frecency;
         let _apps = DesktopEntries.applications;
         let _cmds = root.pathCommands;
+        let _wins = Hyprland.toplevels;
         return root.buildResults();
     }
     property string homeDir: Quickshell.env("HOME") || ""
+    readonly property string clipTools: (root.homeDir || "/home/jeetgr") + "/.config/hypr/scripts/clip-tools.sh"
+    readonly property string clipStateDir: (root.homeDir || "/home/jeetgr") + "/.local/state/quickshell"
     property Process mkdirProc
     property FileView frecencyFile
+    property FileView pinsFile
     property Process pathProc
     property Process clipProc
+    property Process thumbProc
+    property Process pinProc
 
     function fuzzyScore(query, text) {
         if (!text)
@@ -209,8 +237,8 @@ QtObject {
             let apps = root.allApps();
             for (let i = 0; i < apps.length; i++) {
                 let app = apps[i];
-                if (!app || app.noDisplay)
-                    continue;
+            if (!app || app.noDisplay)
+                continue;
 
                 let score = root.appScore(needle, app);
                 if (score < 0)
@@ -294,22 +322,32 @@ QtObject {
             });
 
         } else if (mode === "clip") {
+            let pinIds = {
+            };
+            let pins = root.pins || [];
+            for (let i = 0; i < pins.length; i++) {
+                let item = pins[i];
+                if (!item || !item.id)
+                    continue;
+
+                pinIds[item.id] = true;
+                let hay = (item.preview || "") + " " + (item.id || "");
+                if (needle.length && root.fuzzyScore(needle, hay) < 0)
+                    continue;
+
+                out.push(root.clipResult(item, true, i));
+            }
             let clips = root.clips || [];
             for (let i = 0; i < clips.length; i++) {
                 let item = clips[i];
+                if (!item || pinIds[item.id])
+                    continue;
+
                 let preview = item.preview || item.line || "";
                 if (needle.length && root.fuzzyScore(needle, preview) < 0)
                     continue;
 
-                out.push({
-                    "kind": "clip",
-                    "title": preview.replace(/\s+/g, " "),
-                    "subtitle": "Clipboard",
-                    "icon": "",
-                    "glyph": "󰅌",
-                    "score": 1000 - i,
-                    "line": item.line
-                });
+                out.push(root.clipResult(item, false, i));
             }
         } else if (mode === "calc") {
             if (!needle.length) {
@@ -360,6 +398,49 @@ QtObject {
                     "actionId": a.id
                 });
             }
+        } else if (mode === "windows") {
+            let wins = (Hyprland.toplevels && Hyprland.toplevels.values) || [];
+            let focusedWs = Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1;
+            for (let i = 0; i < wins.length; i++) {
+                let t = wins[i];
+                if (!t || Windows.isShellWindow(t))
+                    continue;
+
+                let title = Windows.titleOf(t);
+                let cls = Windows.classOf(t);
+                if (!title.length && !cls.length)
+                    continue;
+
+                let hay = (title + " " + cls).trim();
+                let score = needle.length ? root.fuzzyScore(needle, hay) : 1;
+                if (score < 0)
+                    continue;
+
+                if (t.urgent)
+                    score += 3000;
+                if (t.workspace && t.workspace.id === focusedWs)
+                    score += 400;
+                if (t.activated)
+                    score -= 80;
+
+                let wsLabel = Windows.workspaceLabel(t);
+                out.push({
+                    "kind": "window",
+                    "title": title.length ? title : cls,
+                    "subtitle": (wsLabel ? wsLabel + " · " : "") + (cls || "window"),
+                    "icon": Windows.iconForToplevel(t),
+                    "glyph": t.urgent ? "󰀨" : "󰖯",
+                    "score": score,
+                    "selector": Windows.selector(t),
+                    "wayland": t.wayland
+                });
+            }
+            out.sort((a, b) => {
+                if (b.score !== a.score)
+                    return b.score - a.score;
+
+                return (a.title || "").localeCompare(b.title || "");
+            });
         }
         let cap = mode === "run" ? 64 : root.maxResults;
         if (out.length > cap)
@@ -369,12 +450,16 @@ QtObject {
     }
 
     function open() {
+        Notifications.close();
+        Cheatsheet.close();
         root.query = "";
         root.selectedIndex = 0;
         root.visible = true;
     }
 
     function openRun() {
+        Notifications.close();
+        Cheatsheet.close();
         root.query = ">";
         root.selectedIndex = 0;
         root.visible = true;
@@ -384,10 +469,25 @@ QtObject {
     }
 
     function openClip() {
+        Notifications.close();
+        Cheatsheet.close();
         root.query = ";";
         root.selectedIndex = 0;
         root.visible = true;
         root.refreshClips();
+    }
+
+    function openWindows() {
+        if (root.visible && root.mode === "windows") {
+            root.close();
+            return ;
+        }
+        Notifications.close();
+        Cheatsheet.close();
+        Hyprland.refreshToplevels();
+        root.query = "#";
+        root.selectedIndex = 0;
+        root.visible = true;
     }
 
     function openPower() {
@@ -395,6 +495,8 @@ QtObject {
             root.close();
             return ;
         }
+        Notifications.close();
+        Cheatsheet.close();
         root.query = ":";
         root.selectedIndex = 0;
         root.visible = true;
@@ -440,13 +542,14 @@ QtObject {
         else if (item.kind === "run")
             root.runCommand(item.command);
         else if (item.kind === "clip")
-            root.copyClip(item.line);
+            root.copyClip(item);
         else if (item.kind === "calc")
             root.copyText(item.value);
         else if (item.kind === "power") {
             PowerMenu.run(item.actionId);
             root.close();
-        }
+        } else if (item.kind === "window")
+            root.focusWindow(item);
     }
 
     function launchApp(app) {
@@ -468,11 +571,169 @@ QtObject {
         root.close();
     }
 
-    function copyClip(line) {
-        if (!line)
+    function focusWindow(item) {
+        if (!item)
             return ;
 
-        Quickshell.execDetached(["bash", "-c", "printf '%s\\n' \"$1\" | cliphist decode | wl-copy", "_", line]);
+        if (item.selector && item.selector.length)
+            Hyprland.dispatch("hl.dsp.focus({ window = \"" + item.selector + "\" })");
+        else if (item.wayland && item.wayland.activate)
+            item.wayland.activate();
+
+        root.close();
+    }
+
+    function clipId(line) {
+        if (!line)
+            return "";
+
+        let tab = line.indexOf("\t");
+        return tab >= 0 ? line.slice(0, tab) : line;
+    }
+
+    function isImagePreview(preview) {
+        return /\[\[ binary data .*\b(png|jpe?g|webp|gif|bmp)\b/i.test(preview || "");
+    }
+
+    function imageLabel(preview) {
+        let m = (preview || "").match(/binary data\s+(\S+(?:\s+\S+)?)\s+(\S+)\s+(\S+)/i);
+        if (!m)
+            return "Image";
+
+        let mime = (m[2] || "image").toUpperCase();
+        let size = m[3] || "";
+        return size ? (mime + " · " + size) : mime;
+    }
+
+    function clipMime(item) {
+        if (!item || !item.isImage)
+            return "text/plain";
+
+        let p = (item.preview || "").toLowerCase();
+        if (p.indexOf("jpeg") >= 0 || p.indexOf("jpg") >= 0)
+            return "image/jpeg";
+        if (p.indexOf("webp") >= 0)
+            return "image/webp";
+        if (p.indexOf("gif") >= 0)
+            return "image/gif";
+        return "image/png";
+    }
+
+    function thumbPath(id) {
+        return root.clipStateDir + "/clip-thumbs/" + id;
+    }
+
+    function pinPath(id) {
+        return root.clipStateDir + "/clip-pins/" + id;
+    }
+
+    function clipResult(item, pinned, index) {
+        let isImage = !!item.isImage;
+        let thumb = "";
+        if (isImage) {
+            if (item.file && item.file.length)
+                thumb = item.file;
+            else
+                thumb = root.thumbPath(item.id);
+        }
+        return {
+            "kind": "clip",
+            "id": item.id,
+            "line": item.line,
+            "preview": item.preview,
+            "isImage": isImage,
+            "pinned": pinned,
+            "file": item.file || "",
+            "thumbPath": thumb,
+            "title": isImage ? root.imageLabel(item.preview) : (item.preview || "").replace(/\s+/g, " "),
+            "subtitle": pinned ? "Pinned" : (isImage ? "Image" : "Clipboard"),
+            "icon": "",
+            "glyph": pinned ? "󰐃" : (isImage ? "󰋩" : "󰅌"),
+            "score": (pinned ? 2000 : 1000) - index
+        };
+    }
+
+    function selectedClip() {
+        if (root.mode !== "clip")
+            return null;
+
+        let items = root.results;
+        if (!items.length)
+            return null;
+
+        let index = Math.max(0, Math.min(items.length - 1, root.selectedIndex));
+        let item = items[index];
+        return item && item.kind === "clip" ? item : null;
+    }
+
+    function pinSelected() {
+        root.togglePin(root.selectedClip());
+    }
+
+    function deleteSelected() {
+        root.deleteClip(root.selectedClip());
+    }
+
+    function togglePin(item) {
+        if (!item || item.kind !== "clip" || !item.id)
+            return ;
+
+        if (item.pinned) {
+            root.removePin(item.id);
+            return ;
+        }
+        root.pendingPin = item;
+        pinProc.running = false;
+        pinProc.running = true;
+    }
+
+    function removePin(id) {
+        let current = root.pins || [];
+        let gone = current.filter((p) => {
+            return p.id === id;
+        });
+        root.pins = current.filter((p) => {
+            return p.id !== id;
+        });
+        root.savePins();
+        for (let i = 0; i < gone.length; i++) {
+            if (gone[i].file)
+                Quickshell.execDetached(["rm", "-f", gone[i].file]);
+
+        }
+    }
+
+    function deleteClip(item) {
+        if (!item || item.kind !== "clip")
+            return ;
+
+        if (item.pinned)
+            root.removePin(item.id);
+
+        if (item.line)
+            Quickshell.execDetached([root.clipTools, "delete", item.line]);
+
+        root.clips = (root.clips || []).filter((c) => {
+            return c.id !== item.id && c.line !== item.line;
+        });
+        if (item.isImage && item.id)
+            Quickshell.execDetached(["rm", "-f", root.thumbPath(item.id)]);
+
+    }
+
+    function copyClip(item) {
+        if (!item)
+            return ;
+
+        if (item.file && item.file.length) {
+            Quickshell.execDetached(["bash", "-c", "wl-copy --type \"$1\" < \"$2\"", "_", root.clipMime(item), item.file]);
+            root.close();
+            return ;
+        }
+        if (!item.line)
+            return ;
+
+        Quickshell.execDetached(["bash", "-c", "printf '%s\\n' \"$1\" | cliphist decode | wl-copy", "_", item.line]);
         root.close();
     }
 
@@ -548,9 +809,38 @@ QtObject {
         }
     }
 
+    function savePins() {
+        try {
+            pinsFile.setText(JSON.stringify({
+                "pins": root.pins || []
+            }));
+        } catch (e) {
+        }
+    }
+
+    function loadPins() {
+        try {
+            let text = pinsFile.text();
+            if (!text || !text.trim().length)
+                return ;
+
+            let data = JSON.parse(text);
+            if (data && Array.isArray(data.pins))
+                root.pins = data.pins;
+            else if (Array.isArray(data))
+                root.pins = data;
+        } catch (e) {
+        }
+    }
+
     function refreshClips() {
         clipProc.running = false;
         clipProc.running = true;
+    }
+
+    function refreshThumbs() {
+        thumbProc.running = false;
+        thumbProc.running = true;
     }
 
     function refreshPathCommands() {
@@ -573,13 +863,24 @@ QtObject {
     }
 
     mkdirProc: Process {
-        command: ["mkdir", "-p", `${root.homeDir}/.local/state/quickshell`]
+        command: ["bash", "-c", "mkdir -p \"$1/clip-thumbs\" \"$1/clip-pins\"", "_", root.clipStateDir]
         running: root.homeDir.length > 0
     }
 
     frecencyFile: FileView {
         path: root.homeDir.length ? `${root.homeDir}/.local/state/quickshell/launcher-frecency.json` : ""
         onLoaded: root.loadFrecency()
+        onPathChanged: {
+            if (path)
+                reload();
+
+        }
+    }
+
+    pinsFile: FileView {
+        path: root.homeDir.length ? `${root.homeDir}/.local/state/quickshell/clip-pins.json` : ""
+        printErrors: false
+        onLoaded: root.loadPins()
         onPathChanged: {
             if (path)
                 reload();
@@ -635,12 +936,20 @@ QtObject {
                     continue;
 
                 let tab = line.indexOf("\t");
+                let id = tab >= 0 ? line.slice(0, tab) : line;
+                let preview = tab >= 0 ? line.slice(tab + 1) : line;
                 out.push({
                     "line": line,
-                    "preview": tab >= 0 ? line.slice(tab + 1) : line
+                    "id": id,
+                    "preview": preview,
+                    "isImage": root.isImagePreview(preview)
                 });
             }
             root.clips = out;
+            if (out.some((c) => {
+                return c.isImage;
+            }))
+                root.refreshThumbs();
         }
 
         stdout: SplitParser {
@@ -649,6 +958,43 @@ QtObject {
             }
         }
 
+    }
+
+    thumbProc: Process {
+        command: [root.clipTools, "thumbs", root.clipStateDir + "/clip-thumbs"]
+        running: false
+        onExited: root.thumbRev += 1
+    }
+
+    pinProc: Process {
+        command: [root.clipTools, "save", (root.pendingPin && root.pendingPin.line) || "", (root.pendingPin && root.pinPath(root.pendingPin.id)) || ""]
+        running: false
+        onExited: {
+            let item = root.pendingPin;
+            root.pendingPin = null;
+            if (exitCode !== 0 || !item || !item.id)
+                return ;
+
+            let file = root.pinPath(item.id);
+            let pins = (root.pins || []).filter((p) => {
+                return p.id !== item.id;
+            });
+            pins.unshift({
+                "id": item.id,
+                "line": item.line,
+                "preview": item.preview,
+                "isImage": !!item.isImage,
+                "file": file
+            });
+            while (pins.length > 20) {
+                let drop = pins.pop();
+                if (drop && drop.file)
+                    Quickshell.execDetached(["rm", "-f", drop.file]);
+
+            }
+            root.pins = pins;
+            root.savePins();
+        }
     }
 
 }

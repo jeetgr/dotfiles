@@ -1,14 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Widgets
 import qs.components
 import qs.services
 
 PanelWindow {
     margins.bottom: Math.round((screen ? screen.height : 1080) * 0.14)
     exclusiveZone: 0
-    implicitHeight: 72
+    implicitHeight: Osd.showMeter ? 72 : 56
     color: "transparent"
 
     anchors {
@@ -21,7 +20,7 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         width: 300
-        height: 64
+        height: Osd.showMeter ? 64 : 48
 
         Rectangle {
             anchors.fill: parent
@@ -58,10 +57,21 @@ PanelWindow {
                     }
 
                     MeterBar {
+                        visible: Osd.showMeter
                         Layout.fillWidth: true
                         barWidth: parent.width
                         value: Osd.value / 100
                         fill: Osd.accent
+                    }
+
+                    Text {
+                        visible: !Osd.showMeter && Osd.detail.length > 0
+                        Layout.fillWidth: true
+                        text: Osd.detail
+                        color: Colors.subtext0
+                        font.family: Tokens.fontFamily
+                        font.pixelSize: Tokens.fontCaption
+                        elide: Text.ElideRight
                     }
 
                 }

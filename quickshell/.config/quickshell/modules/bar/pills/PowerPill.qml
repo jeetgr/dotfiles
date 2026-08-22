@@ -38,7 +38,7 @@ Pill {
     Timer {
         id: closeTimer
 
-        interval: 220
+        interval: Tokens.popoutCloseDelayMs
         onTriggered: {
             if (!powerPopout.popoutHovered && !powerPill.hovered)
                 powerPill.menuOpen = false;
